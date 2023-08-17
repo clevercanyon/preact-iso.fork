@@ -1,14 +1,3 @@
-# @clevercanyon/skeleton
+# @clevercanyon/preact-iso.fork
 
-<img src="https://cdn.clevercanyon.com/assets/uploads/code.gif" style="width:24px;" align="right" />
-<img src="https://cdn.clevercanyon.com/assets/brands/c10n/logo-on-light-bgs.svg" style="height:24px;" align="right" />
-
-**Coming soon** ... another great project by Clever Canyon™
-
-Work is currently in progress<em>!</em>
-
-<img src="https://cdn.clevercanyon.com/assets/uploads/github-snake.gif" style="width:350px;" align="right" />
-<img src="https://cdn.clevercanyon.com/assets/uploads/typescript.svg" style="width:64px;" align="left" />
-<img src="https://cdn.clevercanyon.com/assets/uploads/javascript.svg" style="width:64px;" align="left" />
-<img src="https://cdn.clevercanyon.com/assets/uploads/nodejs.svg" style="width:64px;" align="left" />
-<img src="https://cdn.clevercanyon.com/assets/uploads/manufacturetocat.png" style="width:250px;" align="left" />
+This is a fork of the original [preact-iso](https://www.npmjs.com/package/preact-iso) on NPM. This fork has been modified in several ways and is no longer a drop-in replacement for the original package. The API has been improved and bugs have been fixed in the inbuilt router to allow for server-side prerendering; i.e., where `window.location` does not exist.
