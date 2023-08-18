@@ -3,7 +3,7 @@
 	"publishConfig": {
 		"access": "public"
 	},
-	"version": "2.3.8",
+	"version": "2.3.9",
 	"license": "GPL-3.0-or-later",
 	"name": "@clevercanyon/preact-iso.fork",
 	"description": "Isomorphic utilities for Preact.",
@@ -26,24 +26,14 @@
 	"files": ["/src/*.js"],
 	"bin": {},
 	"imports": {},
-	"exports": {
-		".": "./src/index.js",
-		"./router": "./src/router.js",
-		"./lazy": "./src/lazy.js",
-		"./prerender": "./src/prerender.js",
-		"./hydrate": "./src/hydrate.js"
-	},
+	"exports": null,
 	"sideEffects": [],
 	"module": "./src/index.js",
 	"main": "./src/index.js",
 	"browser": "./src/index.js",
 	"unpkg": "./src/index.js",
 	"types": "./src/index.d.ts",
-	"typesVersions": {
-		">=3.1": {
-			"./*": ["./src/*"]
-		}
-	},
+	"typesVersions": {},
 	"dependencies": {},
 	"peerDependencies": {
 		"preact": "^10.17.0",
