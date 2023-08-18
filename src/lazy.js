@@ -13,8 +13,10 @@ const prevErrorHandler = options.__e;
 
 /**
  * Lazy error boundary.
+ *
+ * @note Minified `__c` = `_childDidSuspend()`. See: <https://o5p.me/3gXT4t>.
  */
-export function LazyErrorBoundary(props) {
+export function ErrorBoundary(props) {
 	this.__c = (thrownPromise) => {
 		thrownPromise.then(() => this.forceUpdate());
 	};
@@ -24,16 +26,28 @@ export function LazyErrorBoundary(props) {
 
 /**
  * Lazy loader for dynamic imports.
+ *
+ * @see https://www.npmjs.com/package/@clevercanyon/preact-iso.fork
  */
-export default function lazy(load) {
-	let p, c;
+export default function lazy(loader) {
+	let promise, component; // Initialize.
+
 	return (props) => {
+		const r = useRef(component);
 		const [, update] = useState(0);
-		const r = useRef(c);
-		if (!p) p = load().then((m) => (c = (m && m.default) || m));
-		if (c !== undefined) return h(c, props);
-		if (!r.current) r.current = p.then(() => update(1));
-		throw p;
+
+		if (!promise) {
+			promise = loader().then((m) => {
+				component = (m && m.default) || m;
+			});
+		}
+		if (undefined !== component) {
+			return h(component, props);
+		}
+		if (!r.current) {
+			r.current = promise.then(() => update(1));
+		}
+		throw promise;
 	};
 }
 
