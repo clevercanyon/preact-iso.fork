@@ -3,7 +3,7 @@
 	"publishConfig": {
 		"access": "public"
 	},
-	"version": "2.3.7",
+	"version": "2.3.8",
 	"license": "GPL-3.0-or-later",
 	"name": "@clevercanyon/preact-iso.fork",
 	"description": "Isomorphic utilities for Preact.",
@@ -39,7 +39,11 @@
 	"browser": "./src/index.js",
 	"unpkg": "./src/index.js",
 	"types": "./src/index.d.ts",
-	"typesVersions": {},
+	"typesVersions": {
+		">=3.1": {
+			"./*": ["./src/*"]
+		}
+	},
 	"dependencies": {},
 	"peerDependencies": {
 		"preact": "^10.17.0",
