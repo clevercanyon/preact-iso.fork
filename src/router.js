@@ -32,7 +32,7 @@ export function Location(props) {
 		const url = new URL(urlData.pathQuery, urlData.origin);
 		const path = url.pathname.replace(/(.)\/$/u, '$1');
 
-		const query = url.searchParams.size ? '?' + url.searchParams.toString() : '';
+		const query = [...url.searchParams.keys()].length ? '?' + url.searchParams.toString() : '';
 		const queryVars = Object.fromEntries(url.searchParams);
 
 		return {
