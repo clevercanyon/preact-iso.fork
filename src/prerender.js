@@ -1,33 +1,49 @@
+/**
+ * Preact ISO.
+ */
+/* eslint-env es2021, browser */
+
 import { h, options, cloneElement } from 'preact';
-import renderToString from 'preact-render-to-string';
+import { renderToString } from 'preact-render-to-string';
 
-let vnodeHook;
+/**
+ * VNode hook reference.
+ */
+let vnodeHook; // Initialize.
 
-const old = options.vnode;
-options.vnode = vnode => {
-	if (old) old(vnode);
+/**
+ * Previous vNode hook.
+ */
+const prevVNodeHook = options.vnode;
+
+/**
+ * Configures preact vNode hook.
+ */
+options.vnode = (vnode) => {
+	if (prevVNodeHook) prevVNodeHook(vnode);
 	if (vnodeHook) vnodeHook(vnode);
 };
 
 /**
- * @param {ReturnType<h>} vnode The root JSX element to render (eg: `<App />`)
- * @param {object} [options]
- * @param {number} [options.maxDepth = 10] The maximum number of nested asynchronous operations to wait for before flushing
- * @param {object} [options.props] Additional props to merge into the root JSX element
+ * Prerenders a vNode tree.
+ *
+ * @param {ReturnType<h>} vnode                 The root JSX element to render (eg: `<App />`).
+ * @param {object}        [options]             Supports `props` and `maxDepth`, which defaults to `10`.
+ * @param {object}        [options.props]       Additional props to merge into the root JSX element.
+ * @param {number}        [options.maxDepth=10] Max nested asynchronous operations to wait for before flushing.
  */
-export default async function prerender(vnode, options) {
-	options = options || {};
-
-	const maxDepth = options.maxDepth || 10;
-	const props = options.props;
+export default async function prerender(vnode, options = {}) {
 	let tries = 0;
+	const links = new Set();
+
+	const props = options.props;
+	const maxDepth = options.maxDepth || 10;
 
 	if (typeof vnode === 'function') {
 		vnode = h(vnode, props);
 	} else if (props) {
 		vnode = cloneElement(vnode, props);
 	}
-
 	const render = () => {
 		if (++tries > maxDepth) return;
 		try {
@@ -37,17 +53,16 @@ export default async function prerender(vnode, options) {
 			throw e;
 		}
 	};
-
-	let links = new Set();
 	vnodeHook = ({ type, props }) => {
-		if (type === 'a' && props && props.href && (!props.target || props.target === '_self')) {
-			links.add(props.href);
+		if ('a' === type && props && props.href) {
+			if (!/^#/u.test(props.href) && /^(_?self)?$/iu.test(props.target || '')) {
+				links.add(props.href);
+			}
 		}
 	};
-
 	try {
 		let html = await render();
-		html += `<script type="isodata"></script>`;
+		html += `<script type="preact-iso-data"></script>`;
 		return { html, links };
 	} finally {
 		vnodeHook = null;

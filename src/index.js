@@ -1,7 +1,12 @@
-export { Router, LocationProvider, useLocation, Route, useRoute } from './router.js';
-export { default as lazy, ErrorBoundary } from './lazy.js';
+/**
+ * Preact ISO.
+ */
+/* eslint-env es2021, browser */
+
+export { Location, Router, Route, useLocation, useRoute } from './router.js';
+export { default as lazy, LazyErrorBoundary } from './lazy.js';
 export { default as hydrate } from './hydrate.js';
 
 export function prerender(vnode, options) {
-	return import('./prerender.js').then(m => m.default(vnode, options));
+	return import('./prerender.js').then((m) => m.default(vnode, options));
 }

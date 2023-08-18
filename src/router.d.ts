@@ -1,37 +1,40 @@
-import { AnyComponent, FunctionComponent, VNode } from 'preact';
+import { AnyComponent, VNode } from 'preact';
 
-export const LocationProvider: FunctionComponent;
-
-export function Router(props: { onRouteChange?: (url: string) => void; onLoadEnd?: (url: string) => void; onLoadStart?: (url: string) => void; children?: VNode[] }): VNode;
-
-interface LocationHook {
-	url: string;
+export type LocationProps = {
+	route: (pathQuery: string) => void;
+	wasPush: boolean;
 	path: string;
-	query: Record<string, string>;
-	route: (url: string) => void;
-}
-export const useLocation: () => LocationHook;
-
-export const useRoute: () => {
+	pathQuery: string;
+	query: string;
+	queryVars: Record<string, string>;
+};
+export type RouteProps = {
 	path: string;
-	query: Record<string, string>;
+	pathQuery: string;
+	restPath: string;
+	restPathQuery: string;
+	query: string;
+	queryVars: Record<string, string>;
 	params: Record<string, string>;
 };
 
-interface RoutableProps {
-	path?: string;
+export function Location(props: {
+	children?: VNode[];
+	url?: string; // Required for SSR.
+}): VNode;
+
+export function Router(props: {
+	children?: VNode[]; //
+	onLoadEnd?: (pathQuery: string) => void;
+	onLoadStart?: (pathQuery: string) => void;
+	onRouteChange?: (pathQuery: string) => void;
+}): VNode;
+
+export function Route(props: {
+	path?: string; //
 	default?: boolean;
-}
+	component?: AnyComponent<RouteProps>;
+}): VNode;
 
-export interface RouteProps<Props> extends RoutableProps {
-	component: AnyComponent<Props>;
-}
-
-export function Route<Props>(props: RouteProps<Props> & Partial<Props>): VNode;
-
-declare module 'preact' {
-	namespace JSX {
-		interface IntrinsicAttributes extends RoutableProps {}
-	}
-	interface Attributes extends RoutableProps {}
-}
+export const useLocation: () => Readonly<LocationProps>;
+export const useRoute: () => ReadOnly<RouteProps>;
