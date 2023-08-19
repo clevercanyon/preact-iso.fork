@@ -1,4 +1,4 @@
-import { AnyComponent, VNode } from 'preact';
+import { AnyComponent, ComponentChildren, VNode } from 'preact';
 
 export type LocationProps = {
 	route: (pathQuery: string) => void;
@@ -19,12 +19,12 @@ export type RouteProps = {
 };
 
 export function Location(props: {
-	children?: VNode[];
+	children?: ComponentChildren;
 	url?: string; // Required for SSR.
 }): VNode;
 
 export function Router(props: {
-	children?: VNode[]; //
+	children?: ComponentChildren; //
 	onLoadEnd?: (pathQuery: string) => void;
 	onLoadStart?: (pathQuery: string) => void;
 	onRouteChange?: (pathQuery: string) => void;
