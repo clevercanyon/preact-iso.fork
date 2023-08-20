@@ -23,7 +23,8 @@ import { ViteMinifyPlugin as pluginMinifyHTML } from 'vite-plugin-minify';
 import u from '../bin/includes/utilities.mjs';
 import importAliases from './includes/import-aliases.mjs';
 import { $fs, $glob } from '../../../node_modules/@clevercanyon/utilities.node/dist/index.js';
-import { $is, $str, $obj, $obp, $http, $time } from '../../../node_modules/@clevercanyon/utilities/dist/index.js';
+import { $http as $cfpꓺhttp } from '../../../node_modules/@clevercanyon/utilities.cfp/dist/index.js';
+import { $is, $str, $obj, $obp, $time } from '../../../node_modules/@clevercanyon/utilities/dist/index.js';
 
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
@@ -101,7 +102,6 @@ export default async ({ mode, command, ssrBuild: isSSRBuild }) => {
 	const appEntries = appEntryFiles.length ? await $glob.promise(appEntryFiles, { cwd: projDir }) : [];
 
 	const appEntriesAsProjRelPaths = appEntries.map((absPath) => './' + path.relative(projDir, absPath));
-	const appEntriesAsSrcRelPaths = appEntries.map((absPath) => './' + path.relative(srcDir, absPath));
 	const appEntriesAsSrcSubpaths = appEntries.map((absPath) => path.relative(srcDir, absPath));
 	const appEntriesAsSrcSubpathsNoExt = appEntriesAsSrcSubpaths.map((subpath) => subpath.replace(/\.[^.]+$/u, ''));
 
@@ -246,7 +246,7 @@ export default async ({ mode, command, ssrBuild: isSSRBuild }) => {
 	const pluginBasicSSLConfig = pluginBasicSSL();
 
 	const pluginEJSConfig = pluginEJS(
-		{ $build: { require, pkg, mode, env, projDir } },
+		{ $: { require, pkg, mode, env, projDir } },
 		{
 			ejs: /* <https://o5p.me/wGv5nM> */ {
 				strict: true, // JS strict mode.
@@ -261,11 +261,6 @@ export default async ({ mode, command, ssrBuild: isSSRBuild }) => {
 					//
 					path.resolve(srcDir, './resources/ejs-views'), // Our standard location for internal EJS views.
 					path.resolve(srcDir, './cargo/assets/ejs-views'), // Our standard location for distributed EJS views.
-
-					// If this package is using `@clevercanyon/utilities` we can also leverage EJS fallback utility views.
-					...(fs.existsSync(path.resolve(projDir, './node_modules/@clevercanyon/utilities/dist/assets/ejs-views'))
-						? [path.resolve(projDir, './node_modules/@clevercanyon/utilities/dist/assets/ejs-views')]
-						: []),
 				],
 			},
 		},
@@ -299,6 +294,22 @@ export default async ({ mode, command, ssrBuild: isSSRBuild }) => {
 				}
 
 				/**
+				 * Generates typescript type declaration file(s).
+				 */
+				if ('build' === command /* Also does important type checking at build time. */) {
+					await u.spawn('npx', ['tsc', '--emitDeclarationOnly']);
+				}
+
+				/**
+				 * Deletes a few files that interfere with apps running on Cloudflare Pages.
+				 */
+				if ('build' === command && ['spa', 'mpa'].includes(appType) && ['cfp'].includes(targetEnv)) {
+					for (const fileOrDir of await $glob.promise(['types', '.env.vault', 'index.*'], { cwd: distDir, onlyFiles: false })) {
+						await fsp.rm(fileOrDir, { force: true, recursive: true });
+					}
+				}
+
+				/**
 				 * Updates a few files that configure apps running on Cloudflare Pages.
 				 */
 				if ('build' === command && ['spa', 'mpa'].includes(appType) && ['cfp'].includes(targetEnv)) {
@@ -312,7 +323,7 @@ export default async ({ mode, command, ssrBuild: isSSRBuild }) => {
 							fileContents = fileContents.replace(new RegExp($str.escRegExp(key), 'gu'), staticDefs[key]);
 						}
 						if (['_headers'].includes(fileRelPath)) {
-							const cfpDefaultHeaders = $http.prepareCFPDefaultHeaders({ appType, isC10n: env.APP_IS_C10N || false });
+							const cfpDefaultHeaders = $cfpꓺhttp.prepareDefaultHeaders({ appType, isC10n: env.APP_IS_C10N || false });
 							fileContents = fileContents.replace('$$__APP_CFP_DEFAULT_HEADERS__$$', cfpDefaultHeaders);
 						}
 						if (['_headers', '_redirects', 'robots.txt'].includes(fileRelPath)) {
@@ -321,7 +332,7 @@ export default async ({ mode, command, ssrBuild: isSSRBuild }) => {
 						} else if (['json'].includes(fileExt)) {
 							fileContents = fileContents.replace(/\/\*[\s\S]*?\*\/\n?/gu, '');
 							//
-						} else if (['xml'].includes(fileExt)) {
+						} else if (['xml', 'html'].includes(fileExt)) {
 							fileContents = fileContents.replace(/<!--[\s\S]*?-->\n?/gu, '');
 						}
 						fileContents = $str.trim(fileContents.replace(/\n{3,}/gu, '\n\n'));
@@ -335,13 +346,6 @@ export default async ({ mode, command, ssrBuild: isSSRBuild }) => {
 				 */
 				if ('build' === command && $obp.get(pkg, 'config.c10n.&.ssrBuild.appType')) {
 					await u.spawn('npx', ['vite', 'build', '--mode', mode, '--ssr']);
-				}
-
-				/**
-				 * Generates typescript type declaration file(s).
-				 */
-				if ('build' === command) {
-					await u.spawn('npx', ['tsc', '--emitDeclarationOnly']);
 				}
 
 				/**
@@ -365,7 +369,9 @@ export default async ({ mode, command, ssrBuild: isSSRBuild }) => {
 	 * @see https://rollupjs.org/guide/en/#big-list-of-options
 	 * @see https://vitejs.dev/config/build-options.html#build-rollupoptions
 	 */
+	const rollupEntryCounters = new Map();
 	const rollupChunkCounters = new Map();
+
 	const rollupConfig = {
 		input: appEntries,
 
@@ -381,6 +387,34 @@ export default async ({ mode, command, ssrBuild: isSSRBuild }) => {
 			extend: true, // i.e., UMD global `||` checks.
 			noConflict: true, // Behaves the same as `jQuery.noConflict()`.
 			compact: shouldMinify ? true : false, // Minify auto-generated snippets?
+
+			// By default, special chars in a path like `[[name]].js` get changed to `__name__.js`.
+			// This prevents that by enforcing the original and unmodified pathname consistently.
+			sanitizeFileName: false, // See: <https://o5p.me/Y2fNf9> for details.
+
+			// By default, in SSR mode, Vite forces all entry files into the distDir root.
+			// This prevents that by enforcing a consistently relative location for all entries.
+			entryFileNames: (entry) => {
+				// This function doesn’t have access to the current output format, unfortunately.
+				// However, we are setting `build.lib.formats` explicitly in the configuration below.
+				// Therefore, we know `es` comes first, followed by either `cjs` or `umd` output entries.
+				// So, entry counters make it possible to infer build output format, based on sequence.
+
+				const entryKey = JSON.stringify(entry); // JSON serialization.
+				const entryCounter = Number(rollupEntryCounters.get(entryKey) || 0) + 1;
+
+				const entryFormat = entryCounter > 1 ? 'cjs|umd' : 'es';
+				const entryExt = 'cjs|umd' === entryFormat ? 'cjs' : 'js';
+
+				rollupEntryCounters.set(entryKey, entryCounter); // Updates counter.
+
+				if ('.html' === path.extname(entry.facadeModuleId)) {
+					if (/\//u.test(entry.name)) return '[name]-[hash].' + entryExt;
+					return path.join(path.relative(distDir, a16sDir), '[name]-[hash].' + entryExt);
+				}
+				if (/\//u.test(entry.name)) return '[name].' + entryExt; // Already a subpath.
+				return path.join(path.relative(srcDir, path.dirname(entry.facadeModuleId)), '[name].' + entryExt);
+			},
 
 			// By default, in library mode, Vite ignores `build.assetsDir`.
 			// This prevents that by enforcing a consistent location for chunks and assets.
@@ -518,8 +552,8 @@ export default async ({ mode, command, ssrBuild: isSSRBuild }) => {
 		define: $obj.map(staticDefs, (v) => JSON.stringify(v)),
 
 		root: srcDir, // Absolute. Where entry indexes live.
-		publicDir: isSSRBuild ? false : path.relative(srcDir, cargoDir), // Relative to `root` directory.
-		base: appBasePath + '/', // Analagous to `<base href="/">` — leading & trailing slash.
+		publicDir: isSSRBuild ? false : path.relative(srcDir, cargoDir), // Relative to `root`.
+		base: appBasePath + '/', // Analagous to `<base href="/">`; i.e., leading & trailing slash.
 
 		appType: ['spa', 'mpa'].includes(appType) ? appType : 'custom', // See: <https://o5p.me/ZcTkEv>.
 		resolve: { alias: importAliases }, // Matches TypeScript config import aliases.
@@ -552,19 +586,19 @@ export default async ({ mode, command, ssrBuild: isSSRBuild }) => {
 			// Note: `a16s` = numeronym for 'acquired resources'.
 
 			ssr: isTargetEnvSSR ? true : false, // Server-side rendering?
-			...(isTargetEnvSSR ? { ssrManifest: 'dev' === mode || ['spa', 'mpa'].includes(appType) } : {}),
 
-			sourcemap: 'dev' === mode, // Enables creation of sourcemaps.
-			manifest: 'dev' === mode, // Enables creation of manifest for assets.
+			manifest: !isSSRBuild, // Enables creation of manifest (for assets).
+			sourcemap: 'dev' === mode, // Enables creation of sourcemaps (for debugging).
+
 			minify: shouldMinify ? 'esbuild' : false, // See: <https://o5p.me/ZyQ4sv>.
+			...(isTargetEnvSSR ? { modulePreload: { resolveDependencies: () => [] } } : {}),
 
 			...(['cma'].includes(appType) // Custom-made apps = library code.
 				? {
 						lib: {
-							name: appLibName,
-							entry: appEntriesAsSrcRelPaths,
-							// Default formats explicitly. See: <https://o5p.me/v0FR3s>.
-							formats: appEntries.length > 1 ? ['es', 'cjs'] : ['es', 'umd'],
+							name: appLibName, // Name of UMD window global var.
+							entry: appEntries, // Should match up with `rollupOptions.input`.
+							formats: isSSRBuild ? ['es'] : appEntries.length > 1 ? ['es', 'cjs'] : ['es', 'umd'],
 						},
 				  }
 				: {}),

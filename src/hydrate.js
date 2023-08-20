@@ -21,13 +21,12 @@ const isWeb = 'Window' in globalThis;
 export default function hydrate(jsx, parent) {
 	if (!isWeb) return; // Not applicable.
 
-	let isoData = document.querySelector('script[type=preact-iso-data]');
-	parent = parent || (isoData && isoData.parentNode) || document;
+	parent = parent || document;
 
-	if (!initialized && isoData) {
+	if (!initialized) {
+		initialized = true;
 		hydrativeRender(jsx, parent);
 	} else {
 		render(jsx, parent);
 	}
-	initialized = true;
 }

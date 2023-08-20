@@ -61,8 +61,7 @@ export default async function prerender(vnode, options = {}) {
 		}
 	};
 	try {
-		let html = await render();
-		html += `<script type="preact-iso-data"></script>`;
+		const html = await render();
 		return { html, links };
 	} finally {
 		vnodeHook = null;
