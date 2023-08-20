@@ -1,6 +1,10 @@
 import { AnyComponent, ComponentChildren, VNode } from 'preact';
 
 export type LocationProps = {
+	children?: ComponentChildren;
+	url?: string; // Required for SSR.
+};
+export type LocationContext = {
 	route: (pathQuery: string) => void;
 	wasPush: boolean;
 	path: string;
@@ -8,7 +12,18 @@ export type LocationProps = {
 	query: string;
 	queryVars: Record<string, string>;
 };
+export type RouterProps = {
+	children?: ComponentChildren; //
+	onLoadEnd?: (pathQuery: string) => void;
+	onLoadStart?: (pathQuery: string) => void;
+	onRouteChange?: (pathQuery: string) => void;
+};
 export type RouteProps = {
+	path?: string; //
+	default?: boolean;
+	component?: AnyComponent<RouteProps>;
+};
+export type RouteContext = {
 	path: string;
 	pathQuery: string;
 	restPath: string;
@@ -17,24 +32,9 @@ export type RouteProps = {
 	queryVars: Record<string, string>;
 	params: Record<string, string>;
 };
+export function Router(props: RouterProps): VNode;
+export function Location(props: LocationProps): VNode;
+export function Route(props: RouteProps): VNode;
 
-export function Location(props: {
-	children?: ComponentChildren;
-	url?: string; // Required for SSR.
-}): VNode;
-
-export function Router(props: {
-	children?: ComponentChildren; //
-	onLoadEnd?: (pathQuery: string) => void;
-	onLoadStart?: (pathQuery: string) => void;
-	onRouteChange?: (pathQuery: string) => void;
-}): VNode;
-
-export function Route(props: {
-	path?: string; //
-	default?: boolean;
-	component?: AnyComponent<RouteProps>;
-}): VNode;
-
-export const useLocation: () => Readonly<LocationProps>;
-export const useRoute: () => ReadOnly<RouteProps>;
+export const useLocation: () => Readonly<LocationContext>;
+export const useRoute: () => ReadOnly<RouteContext>;
