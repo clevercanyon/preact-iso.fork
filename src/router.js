@@ -22,39 +22,46 @@ const resolvedPromise = Promise.resolve();
  * Location provider.
  */
 export function Location(props) {
-	const initialURL = new URL(props.url || (isWeb ? location.href : ''), isWeb ? location.origin : undefined);
-	const [urlData, route] = useReducer(locationReducer, {
+	let initialURL;
+
+	if (props.url instanceof URL) {
+		initialURL = props.url;
+	} else if (props.url) {
+		initialURL = new URL(props.url, isWeb ? location.origin : undefined);
+	} else {
+		initialURL = new URL(isWeb ? location.href : '', isWeb ? location.origin : undefined);
+	}
+	const [state, updateState] = useReducer(locationReducer, {
 		wasPush: true,
 		origin: initialURL.origin,
 		pathQuery: initialURL.pathname + initialURL.search,
 	});
-	const value = useMemo(() => {
-		const url = new URL(urlData.pathQuery, urlData.origin);
+	const value = /* Only when state changes. */ useMemo(() => {
+		const url = new URL(state.pathQuery, state.origin);
 		const path = url.pathname.replace(/(.)\/$/u, '$1');
 
 		const query = [...url.searchParams.keys()].length ? '?' + url.searchParams.toString() : '';
 		const queryVars = Object.fromEntries(url.searchParams);
 
 		return {
-			route,
-			wasPush: urlData.wasPush,
+			route: updateState,
+			wasPush: state.wasPush,
 			path,
 			pathQuery: path + query,
 			query,
 			queryVars,
 		};
-	}, [urlData]);
+	}, [state]);
 
 	useLayoutEffect(() => {
-		addEventListener('click', route);
-		addEventListener('popstate', route);
+		addEventListener('click', updateState);
+		addEventListener('popstate', updateState);
 
 		return () => {
-			removeEventListener('click', route);
-			removeEventListener('popstate', route);
+			removeEventListener('click', updateState);
+			removeEventListener('popstate', updateState);
 		};
 	}, []);
-
 	return h(Location.ctx.Provider, { value }, props.children);
 }
 Location.ctx = createContext({});
@@ -63,22 +70,22 @@ export const useLocation = () => useContext(Location.ctx);
 /**
  * Location reducer.
  */
-const locationReducer = (state, e) => {
+const locationReducer = (state, x) => {
 	let newURL, isPush, isClick;
 
-	if (null !== e && typeof e === 'object' && 'click' === e.type) {
+	if (null !== x && typeof x === 'object' && 'click' === x.type) {
 		isClick = isPush = true;
 
 		if (!isWeb) {
 			return state; // Not possible.
 		}
-		if (typeof e.button === 'number' && 0 !== e.button) {
+		if (typeof x.button === 'number' && 0 !== x.button) {
 			return state; // Already handled by browser.
 		}
-		if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) {
+		if (x.ctrlKey || x.metaKey || x.altKey || x.shiftKey) {
 			return state; // Already handled by browser.
 		}
-		const a = e.target.closest('a[href]');
+		const a = x.target.closest('a[href]');
 		const aHref = a ? a.getAttribute('href') : '';
 
 		if (!a || !a.href || !aHref) {
@@ -89,17 +96,17 @@ const locationReducer = (state, e) => {
 		}
 		newURL = new URL(a.href, state.origin);
 		//
-	} else if (null !== e && typeof e === 'object') {
+	} else if (null !== x && typeof x === 'object') {
 		isPush = true;
 
-		if (!e.pathQuery) {
+		if (!x.pathQuery) {
 			return state; // Not applicable.
 		}
-		newURL = new URL(e.pathQuery, state.origin);
+		newURL = new URL(x.pathQuery, state.origin);
 		//
-	} else if (typeof e === 'string') {
+	} else if (typeof x === 'string') {
 		isPush = true;
-		const pathQuery = e;
+		const pathQuery = x;
 
 		if (!pathQuery) {
 			return state; // Not applicable.
@@ -115,7 +122,7 @@ const locationReducer = (state, e) => {
 	if (!newURL || newURL.origin !== state.origin) {
 		return state; // Not applicable.
 	}
-	if (isClick && isWeb) e.preventDefault();
+	if (isClick && isWeb) x.preventDefault();
 
 	if (true === isPush && isWeb) {
 		history.pushState(null, '', newURL);
