@@ -2,7 +2,7 @@ import { AnyComponent, ComponentChildren, VNode } from 'preact';
 
 export type LocationProps = {
 	children?: ComponentChildren;
-	url?: string; // Required for SSR.
+	url?: URL | string; // Required for SSR.
 };
 export type LocationContext = {
 	route: (pathQuery: string) => void;
