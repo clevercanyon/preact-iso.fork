@@ -1,4 +1,4 @@
-import { VNode } from 'preact';
+import { AnyComponent, VNode } from 'preact';
 
 export interface PrerenderOptions {
 	maxDepth?: number;
@@ -10,4 +10,4 @@ export interface PrerenderResult {
 	links?: Set<string>;
 }
 
-export default function prerender(vnode: VNode, options?: PrerenderOptions): Promise<PrerenderResult>;
+export default function prerender(vnode: AnyComponent | VNode, options?: PrerenderOptions): Promise<PrerenderResult>;
