@@ -38,18 +38,26 @@ export function Location(props) {
 	});
 	const value = /* Only when state changes. */ useMemo(() => {
 		const url = new URL(state.pathQuery, state.origin);
-		const path = url.pathname.replace(/(.)\/$/u, '$1');
 
-		const query = [...url.searchParams.keys()].length ? '?' + url.searchParams.toString() : '';
-		const queryVars = Object.fromEntries(url.searchParams);
+		url.pathname = url.pathname.replace(/(.)\/$/u, '$1');
+		url.hash = ''; // We don't ever use this in routing.
+
+		const canonicalURL = new URL(url.toString().replace(/[?#].*$/gu, ''));
+		canonicalURL.pathname = canonicalURL.pathname.replace(/(.)\/$/u, '$1');
 
 		return {
 			route: updateState,
 			wasPush: state.wasPush,
-			path,
-			pathQuery: path + query,
-			query,
-			queryVars,
+			origin: url.origin,
+
+			url,
+			canonicalURL,
+
+			path: url.pathname,
+			pathQuery: url.pathname + url.search,
+
+			query: url.search, // Includes leading `?`.
+			queryVars: Object.fromEntries(url.searchParams),
 		};
 	}, [state]);
 
@@ -181,10 +189,13 @@ export function Router(props) {
 		const routeChildCtxProps = {
 			path: restPath,
 			pathQuery: restPathQuery,
+
 			restPath: '',
 			restPathQuery: '',
+
 			query,
 			queryVars,
+
 			params,
 		};
 		toChildArray(props.children).some((childVNode) => {

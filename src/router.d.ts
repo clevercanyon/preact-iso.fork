@@ -7,8 +7,14 @@ export type LocationProps = {
 export type LocationContext = {
 	route: (pathQuery: string) => void;
 	wasPush: boolean;
+	origin: string;
+
+	url: URL;
+	canonicalURL: URL;
+
 	path: string;
 	pathQuery: string;
+
 	query: string;
 	queryVars: Record<string, string>;
 };
@@ -26,10 +32,13 @@ export type RouteProps = {
 export type RouteContext = {
 	path: string;
 	pathQuery: string;
+
 	restPath: string;
 	restPathQuery: string;
+
 	query: string;
 	queryVars: Record<string, string>;
+
 	params: Record<string, string>;
 };
 export function Router(props: RouterProps): VNode;
