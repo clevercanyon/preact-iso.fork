@@ -27,19 +27,19 @@ options.vnode = (vnode) => {
 /**
  * Prerenders a vNode tree.
  *
- * @param {ReturnType<h>} vnode                 The root JSX element to render (eg: `<App />`).
+ * @param {ReturnType<h>} vnode                 The root JSX element to render; e.g., `<App />`.
  * @param {object}        [options]             Supports `props` and `maxDepth`, which defaults to `10`.
  * @param {object}        [options.props]       Additional props to merge into the root JSX element.
- * @param {number}        [options.maxDepth=10] Max nested asynchronous operations to wait for before flushing.
+ * @param {number}        [options.maxDepth=10] Max nested async operations to wait for before flushing.
  */
 export default async function prerender(vnode, options = {}) {
-	let tries = 0;
+	let tries = 0; // Initialize.
 	const links = new Set();
 
 	const props = options.props;
 	const maxDepth = options.maxDepth || 10;
 
-	if (typeof vnode === 'function') {
+	if ('function' === typeof vnode) {
 		vnode = h(vnode, props);
 	} else if (props) {
 		vnode = cloneElement(vnode, props);
@@ -49,7 +49,9 @@ export default async function prerender(vnode, options = {}) {
 		try {
 			return renderToString(vnode);
 		} catch (e) {
-			if (e && e.then) return e.then(render);
+			if (e && e.then) {
+				return e.then(render);
+			}
 			throw e;
 		}
 	};
@@ -61,8 +63,7 @@ export default async function prerender(vnode, options = {}) {
 		}
 	};
 	try {
-		const html = await render();
-		return { html, links };
+		return { html: await render(), links };
 	} finally {
 		vnodeHook = null;
 	}
