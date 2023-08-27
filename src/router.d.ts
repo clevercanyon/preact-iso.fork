@@ -41,6 +41,8 @@ export type RouteContext = {
 
 	params: Record<string, string>;
 };
+export type RouteContextProps = RouteContext;
+
 export function Router(props: RouterProps): VNode;
 export function Location(props: LocationProps): VNode;
 export function Route(props: RouteProps): VNode;
