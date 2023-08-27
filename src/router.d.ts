@@ -25,7 +25,7 @@ export type RouterProps = {
 	onRouteChange?: (pathQuery: string) => void;
 };
 export type RouteProps = {
-	path: string;
+	path?: string;
 	default?: boolean;
 	component: AnyComponent<RouteContextProps>;
 };
