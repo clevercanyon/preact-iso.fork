@@ -27,7 +27,7 @@ export type RouterProps = {
 export type RouteProps = {
 	path?: string;
 	default?: boolean;
-	component: AnyComponent<RouteContextProps>;
+	component: AnyComponent<RouteContextAsProps>;
 };
 export type RouteContext = {
 	path: string;
@@ -41,11 +41,11 @@ export type RouteContext = {
 
 	params: Record<string, string>;
 };
-export type RouteContextProps = RouteContext;
+export type RouteContextAsProps = RouteContext;
 
 export function Router(props: RouterProps): VNode<RouterProps>;
 export function Location(props: LocationProps): VNode<LocationProps>;
 export function Route(props: RouteProps): VNode<RouteProps>;
 
 export const useLocation: () => Readonly<LocationContext>;
-export const useRoute: () => ReadOnly<RouteContext>;
+export const useRoute: () => Readonly<RouteContext>;
