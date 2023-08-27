@@ -19,15 +19,15 @@ export type LocationContext = {
 	queryVars: Record<string, string>;
 };
 export type RouterProps = {
-	children?: ComponentChildren; //
+	children?: ComponentChildren;
 	onLoadEnd?: (pathQuery: string) => void;
 	onLoadStart?: (pathQuery: string) => void;
 	onRouteChange?: (pathQuery: string) => void;
 };
 export type RouteProps = {
-	path?: string; //
+	path: string;
 	default?: boolean;
-	component?: AnyComponent<RouteProps>;
+	component: AnyComponent<RouteContextProps>;
 };
 export type RouteContext = {
 	path: string;
@@ -43,9 +43,9 @@ export type RouteContext = {
 };
 export type RouteContextProps = RouteContext;
 
-export function Router(props: RouterProps): VNode;
-export function Location(props: LocationProps): VNode;
-export function Route(props: RouteProps): VNode;
+export function Router(props: RouterProps): VNode<RouterProps>;
+export function Location(props: LocationProps): VNode<LocationProps>;
+export function Route(props: RouteProps): VNode<RouteProps>;
 
 export const useLocation: () => Readonly<LocationContext>;
 export const useRoute: () => ReadOnly<RouteContext>;
