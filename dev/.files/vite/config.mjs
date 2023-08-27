@@ -533,14 +533,14 @@ export default async ({ mode, command, ssrBuild: isSSRBuild }) => {
 		// @todo Fix and enhance miniflare support.
 		environment: ['cfp', 'web', 'webw'].includes(targetEnv) ? 'jsdom' // <https://o5p.me/Gf9Cy5>.
 			: ['cfw'].includes(targetEnv) ? 'miniflare' // <https://o5p.me/TyF9Ot>.
-			: ['node'].includes(targetEnv) ? 'node' // <https://o5p.me/Gf9Cy5>.
+			: ['node', 'any'].includes(targetEnv) ? 'node' // <https://o5p.me/Gf9Cy5>.
 			: 'node', // prettier-ignore
 
 		// See: <https://o5p.me/8Pjw1d> for `environment`, `environmentMatchGlobs` precedence.
 		environmentMatchGlobs: [
 			['**/*.{cfp,web,webw}.{test,tests,spec,specs}.{' + vitestExtensions.map((e) => e.slice(1)).join(',') + '}', 'jsdom'],
 			['**/*.cfw.{test,tests,spec,specs}.{' + vitestExtensions.map((e) => e.slice(1)).join(',') + '}', 'miniflare'],
-			['**/*.node.{test,tests,spec,specs}.{' + vitestExtensions.map((e) => e.slice(1)).join(',') + '}', 'node'],
+			['**/*.{node,any}.{test,tests,spec,specs}.{' + vitestExtensions.map((e) => e.slice(1)).join(',') + '}', 'node'],
 		],
 		server: { deps: { external: ['**/dist/**', '**/node_modules/**'].concat(rollupConfig.external) } },
 		cache: { dir: path.resolve(projDir, './node_modules/.vitest') },
