@@ -22,19 +22,19 @@ const resolvedPromise = Promise.resolve();
  * Location provider.
  */
 export function Location(props) {
-	let initialURL;
+	let locURL; // Initialize.
 
 	if (props.url instanceof URL) {
-		initialURL = props.url;
-	} else if (props.url) {
-		initialURL = new URL(props.url, isWeb ? location.origin : undefined);
+		locURL = props.url;
+	} else if ('string' === typeof props.url) {
+		locURL = new URL(props.url, isWeb ? location.origin : undefined);
 	} else {
-		initialURL = new URL(isWeb ? location.href : '', isWeb ? location.origin : undefined);
+		locURL = new URL(isWeb ? location.href : '', isWeb ? location.origin : undefined);
 	}
 	const [state, updateState] = useReducer(locationReducer, {
 		wasPush: true,
-		origin: initialURL.origin,
-		pathQuery: initialURL.pathname + initialURL.search,
+		origin: locURL.origin,
+		pathQuery: locURL.pathname + locURL.search,
 	});
 	const value = /* Only when state changes. */ useMemo(() => {
 		const url = new URL(state.pathQuery, state.origin);
@@ -60,7 +60,6 @@ export function Location(props) {
 			queryVars: Object.fromEntries(url.searchParams),
 		};
 	}, [state]);
-
 	useLayoutEffect(() => {
 		addEventListener('click', updateState);
 		addEventListener('popstate', updateState);
@@ -104,6 +103,12 @@ const locationReducer = (state, x) => {
 		}
 		newURL = new URL(a.href, state.origin);
 		//
+	} else if (null !== x && typeof x === 'object' && 'popstate' === x.type) {
+		if (!isWeb) {
+			return state; // Not applicable.
+		}
+		newURL = new URL(location.href, state.origin);
+		//
 	} else if (null !== x && typeof x === 'object') {
 		isPush = true;
 
@@ -120,12 +125,6 @@ const locationReducer = (state, x) => {
 			return state; // Not applicable.
 		}
 		newURL = new URL(pathQuery, state.origin);
-		//
-	} /* e.g. Popstate events. */ else {
-		if (!isWeb) {
-			return state; // Not applicable.
-		}
-		newURL = new URL(location.href, state.origin);
 	}
 	if (!newURL || newURL.origin !== state.origin) {
 		return state; // Not applicable.
@@ -230,7 +229,7 @@ export function Router(props) {
 		isLoading.current = true;
 
 		// Re-render on un-suspension.
-		const countSnapshot = count.current;
+		const countSnapshot = count.current; // Snapshot of counter.
 		thrownPromise.then((/* When no longer in a suspended state. */) => {
 			// Ignore this update if it isn't the most recently suspended update.
 			if (countSnapshot !== count.current) return;
