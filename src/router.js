@@ -116,7 +116,7 @@ export function Router(props) {
 			params: {}, // Potentially populated by `pathMatchesRoutePattern()`.
 		};
 		toChildArray(props.children).some((childVNode) => {
-			if (pathMatchesRoutePattern(location.path, childVNode.props.path, routeContextProps)) {
+			if (pathMatchesRoutePattern(context.restPath || location.path, childVNode.props.path, routeContextProps)) {
 				return (matchingChildVNode = cloneElement(childVNode, routeContextProps));
 			}
 			if (childVNode.props.default) {
