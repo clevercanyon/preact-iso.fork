@@ -3,7 +3,7 @@
 	"publishConfig": {
 		"access": "public"
 	},
-	"version": "2.3.34",
+	"version": "2.3.35",
 	"license": "GPL-3.0-or-later",
 	"name": "@clevercanyon/preact-iso.fork",
 	"description": "Isomorphic utilities for Preact.",
@@ -30,6 +30,10 @@
 		".": {
 			"import": "./src/index.js",
 			"types": "./src/index.d.ts"
+		},
+		"./env": {
+			"import": "./src/env.js",
+			"types": "./src/env.d.ts"
 		},
 		"./router": {
 			"import": "./src/router.js",
