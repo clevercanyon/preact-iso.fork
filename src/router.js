@@ -108,7 +108,7 @@ export function Router(props) {
 
 		// Current route context props reflect the 'rest'.
 		// i,e., in current context of potentially nested routers.
-		const routeContextProps = {
+		let routeContextProps = {
 			path: context.restPath || locState.path,
 			pathQuery: context.restPathQuery || locState.pathQuery,
 			restPath: '', // Potentially populated by `pathMatchesRoutePattern()`.
@@ -118,8 +118,10 @@ export function Router(props) {
 			params: {}, // Potentially populated by `pathMatchesRoutePattern()`.
 		};
 		toChildArray(props.children).some((childVNode) => {
-			if (pathMatchesRoutePattern(context.restPath || locState.path, childVNode.props.path, routeContextProps)) {
-				return (matchingChildVNode = cloneElement(childVNode, routeContextProps));
+			let matchingRouteContextProps; // Initialize.
+
+			if ((matchingRouteContextProps = pathMatchesRoutePattern(context.restPath || locState.path, childVNode.props.path, routeContextProps))) {
+				return (matchingChildVNode = cloneElement(childVNode, (routeContextProps = matchingRouteContextProps)));
 			}
 			if (childVNode.props.default) {
 				defaultChildVNode = cloneElement(childVNode, routeContextProps);
@@ -304,44 +306,50 @@ const locationReducer = (state, x) => {
  * Path checker; i.e., checks if a path matches a route pattern.
  *
  * @param   path              Location path to compare/check.
- * @param   route             Route pattern to compare/check.
+ * @param   routePattern      Route pattern to compare/check.
  * @param   routeContextProps Route (child of Router) context props.
  *
- * @returns                   Potentially modified `routeContextProps` when path matches route. When path does not match
- *   route pattern, `undefined` is returned. Use `!` to test if the return value is falsey.
+ * @returns                   New `routeContextProps` when path matches route. When path does not match route pattern,
+ *   `undefined` is returned. It’s perfectly OK to use `!` when testing if the return value is falsy.
  */
-const pathMatchesRoutePattern = (path, route, routeContextProps) => {
-	if (!path || !route || !routeContextProps) {
+const pathMatchesRoutePattern = (path, routePattern, routeContextProps) => {
+	if (!path || !routePattern || !routeContextProps) {
 		return; // Not possible.
 	}
 	const pathParts = path.split('/').filter(Boolean);
-	const routeParts = route.split('/').filter(Boolean);
+	const routePatternParts = routePattern.split('/').filter(Boolean);
+	const newRouteContextProps = { ...routeContextProps }; // Shallow clone.
 
-	for (let i = 0, pathPart, routePart; i < Math.max(pathParts.length, routeParts.length); i++) {
-		// Path and route part variables.
-		(pathPart = pathParts[i] || ''), (routePart = routeParts[i] || '');
-		let [, routePartValueIsNamed, routePartValue, routePartFlag] = routePart.match(/^(:?)(.*?)([+*?]?)$/u);
+	for (let i = 0; i < Math.max(pathParts.length, routePatternParts.length); i++) {
+		const pathPart = pathParts[i] || '';
+		const routePatternPart = routePatternParts[i] || '';
+		const [
+			unusedꓺ$0, // Using `$1...$3` only.
+			routePatternPartValueIsParam, // `$1`.
+			routePatternPartValue, // `$2`.
+			routePatternPartFlag, // `$3`.
+		] = routePatternPart.match(/^(:?)(.*?)([+*?]?)$/u);
 
-		// Unnamed segment match.
-		if (!routePartValueIsNamed && pathPart === routePartValue) continue;
+		if (routePatternPartValueIsParam) {
+			if (!pathPart && !['?', '*'].includes(routePatternPartFlag)) {
+				return; // Missing a required path part param.
+			}
+			if (['+', '*'].includes(routePatternPartFlag) /* Greedy param. */) {
+				newRouteContextProps.params[routePatternPartValue] = pathParts.slice(i).map(decodeURIComponent).join('/');
+				break; // We can stop here on greedy params; i.e., we’ve got everything in this param now.
+			} else if (pathPart) {
+				newRouteContextProps.params[routePatternPartValue] = decodeURIComponent(pathPart);
+			}
+		} else {
+			if (pathPart === routePatternPartValue) continue;
 
-		// Path `/foo/*` match .. facilitates nested routes.
-		if (!routePartValueIsNamed && pathPart && '*' === routePartFlag) {
-			routeContextProps.restPath = '/' + pathParts.slice(i).map(decodeURIComponent).join('/');
-			routeContextProps.restPathQuery = routeContextProps.restPath + routeContextProps.query;
-			break; // We can stop here on nested routes.
+			if (pathPart && '*' === routePatternPartFlag) {
+				newRouteContextProps.restPath = '/' + pathParts.slice(i).map(decodeURIComponent).join('/');
+				newRouteContextProps.restPathQuery = newRouteContextProps.restPath + newRouteContextProps.query;
+				break; // We can stop here; i.e., the rest can be parsed by nested routes.
+			}
+			return; // Part is missing, or not an exact match, and not a wildcard `*` match either.
 		}
-		// Segment mismatch / missing required field.
-		if (!routePartValueIsNamed || (!pathPart && '?' !== routePartFlag && '*' !== routePartFlag)) return;
-
-		// Named route part values.
-		if ('+' === routePartFlag || '*' === routePartFlag) {
-			pathPart = pathParts.slice(i).map(decodeURIComponent).join('/');
-		} else if (pathPart) {
-			pathPart = decodeURIComponent(pathPart);
-		}
-		routeContextProps.params[routePartValue] = pathPart;
-		if ('+' === routePartFlag || '*' === routePartFlag) break;
 	}
-	return routeContextProps;
+	return newRouteContextProps;
 };
