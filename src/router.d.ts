@@ -5,18 +5,20 @@ export type LocationProps = {
 	url?: URL | string; // Required for SSR.
 };
 export type LocationContext = {
-	route: (pathQuery: string) => void;
-	wasPush: boolean;
-	origin: string;
+	state: {
+		wasPush: boolean;
+		origin: string;
 
-	url: URL;
-	canonicalURL: URL;
+		url: URL;
+		canonicalURL: URL;
 
-	path: string;
-	pathQuery: string;
+		path: string;
+		pathQuery: string;
 
-	query: string;
-	queryVars: Record<string, string>;
+		query: string;
+		queryVars: Record<string, string>;
+	};
+	updateState: (pathQuery: string) => void;
 };
 export type RouterProps = {
 	children?: ComponentChildren;

@@ -26,7 +26,7 @@ export function Location(props) {
 		undefined, // Initial state produced by init function.
 		() => initialLocationState(props),
 	);
-	const contextValue = /* Calculate only when state changes. */ useMemo(() => {
+	const context = /* Calculate only when state changes. */ useMemo(() => {
 		const url = new URL(state.pathQuery, state.origin);
 
 		url.pathname = url.pathname.replace(/(.)\/$/u, '$1');
@@ -36,18 +36,20 @@ export function Location(props) {
 		canonicalURL.pathname = canonicalURL.pathname.replace(/(.)\/$/u, '$1');
 
 		return {
-			route: updateState,
-			wasPush: state.wasPush,
-			origin: url.origin,
+			state: {
+				wasPush: state.wasPush,
+				origin: url.origin,
 
-			url,
-			canonicalURL,
+				url,
+				canonicalURL,
 
-			path: url.pathname,
-			pathQuery: url.pathname + url.search,
+				path: url.pathname,
+				pathQuery: url.pathname + url.search,
 
-			query: url.search, // Includes leading `?`.
-			queryVars: Object.fromEntries(url.searchParams),
+				query: url.search, // Includes leading `?`.
+				queryVars: Object.fromEntries(url.searchParams),
+			},
+			updateState, // i.e., Location reducer updates state.
 		};
 	}, [state.wasPush, state.origin, state.pathQuery]);
 
@@ -61,7 +63,7 @@ export function Location(props) {
 		};
 	}, [state.wasPush, state.origin, state.pathQuery]);
 
-	return h(Location.ctx.Provider, { value: contextValue }, props.children);
+	return h(Location.ctx.Provider, { value: context }, props.children);
 }
 Location.ctx = createContext({}); // Location context.
 export const useLocation = () => useContext(Location.ctx);
@@ -74,17 +76,17 @@ export const useLocation = () => useContext(Location.ctx);
  * @returns       Rendered refs; i.e,. current and previous routes.
  */
 export function Router(props) {
-	const location = useLocation(); // Current location.
-	const context = useContext(Router.ctx); // Current context.
+	const context = useContext(Router.ctx);
+	const { state: locState } = useLocation();
 	const [layoutTicks, updateLayoutTicks] = useReducer((c) => c + 1, 0);
 
 	const routeCounter = useRef(0);
 	const routerHasEverCommitted = useRef(false);
 
 	const previousRoute = useRef();
-	const prevLocationWasPush = useRef(location.wasPush);
-	const prevLocationOrigin = useRef(location.origin);
-	const prevLocationPathQuery = useRef(location.pathQuery);
+	const prevLocationWasPush = useRef(locState.wasPush);
+	const prevLocationOrigin = useRef(locState.origin);
+	const prevLocationPathQuery = useRef(locState.pathQuery);
 
 	const currentRoute = useRef();
 	const currentRouteDidSuspend = useRef();
@@ -107,16 +109,16 @@ export function Router(props) {
 		// Current route context props reflect the 'rest'.
 		// i,e., in current context of potentially nested routers.
 		const routeContextProps = {
-			path: context.restPath || location.path,
-			pathQuery: context.restPathQuery || location.pathQuery,
+			path: context.restPath || locState.path,
+			pathQuery: context.restPathQuery || locState.pathQuery,
 			restPath: '', // Potentially populated by `pathMatchesRoutePattern()`.
 			restPathQuery: '', // Potentially populated by `pathMatchesRoutePattern()`.
-			query: location.query, // Always the same ones.
-			queryVars: location.queryVars, // Always the same ones.
+			query: locState.query, // Always the same ones.
+			queryVars: locState.queryVars, // Always the same ones.
 			params: {}, // Potentially populated by `pathMatchesRoutePattern()`.
 		};
 		toChildArray(props.children).some((childVNode) => {
-			if (pathMatchesRoutePattern(context.restPath || location.path, childVNode.props.path, routeContextProps)) {
+			if (pathMatchesRoutePattern(context.restPath || locState.path, childVNode.props.path, routeContextProps)) {
 				return (matchingChildVNode = cloneElement(childVNode, routeContextProps));
 			}
 			if (childVNode.props.default) {
@@ -124,7 +126,7 @@ export function Router(props) {
 			}
 		});
 		return h(Router.ctx.Provider, { value: routeContextProps }, matchingChildVNode || defaultChildVNode);
-	}, [location.wasPush, location.origin, location.pathQuery]);
+	}, [locState.wasPush, locState.origin, locState.pathQuery]);
 
 	// If rendering succeeds synchronously, we shouldn't render the previous children.
 	const previousRouteSnapshot = previousRoute.current;
@@ -179,16 +181,16 @@ export function Router(props) {
 		routerHasEverCommitted.current = true; // Obviously true at this point.
 
 		// The new current route is loaded and rendered?
-		if (prevLocationWasPush.current !== location.wasPush || prevLocationOrigin.current !== location.origin || prevLocationPathQuery.current !== location.pathQuery) {
-			if (location.wasPush) scrollTo(0, 0);
+		if (prevLocationWasPush.current !== locState.wasPush || prevLocationOrigin.current !== locState.origin || prevLocationPathQuery.current !== locState.pathQuery) {
+			if (locState.wasPush) scrollTo(0, 0);
 
 			if (props.onLoadEnd && currentRouteIsLoading.current) props.onLoadEnd();
 			if (props.onRouteChange) props.onRouteChange();
 
-			(prevLocationWasPush.current = location.wasPush), (prevLocationOrigin.current = location.origin), (prevLocationPathQuery.current = location.path);
+			(prevLocationWasPush.current = locState.wasPush), (prevLocationOrigin.current = locState.origin), (prevLocationPathQuery.current = locState.path);
 			currentRouteIsLoading.current = false; // Loading complete.
 		}
-	}, [location.wasPush, location.origin, location.pathQuery, layoutTicks]);
+	}, [locState.wasPush, locState.origin, locState.pathQuery, layoutTicks]);
 
 	// Note: `currentRoute` MUST render first in order to trigger a thrown promise.
 	return [h(RenderRef, { r: currentRoute }), h(RenderRef, { r: previousRoute })];
