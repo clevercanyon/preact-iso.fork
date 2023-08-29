@@ -1,4 +1,4 @@
-import { AnyComponent, ComponentChildren, VNode } from 'preact';
+import type { AnyComponent, ComponentChildren, VNode } from 'preact';
 
 export type LocationProps = {
 	children?: ComponentChildren;
@@ -20,9 +20,9 @@ export type LocationContext = {
 };
 export type RouterProps = {
 	children?: ComponentChildren;
-	onLoadEnd?: (pathQuery: string) => void;
-	onLoadStart?: (pathQuery: string) => void;
-	onRouteChange?: (pathQuery: string) => void;
+	onLoadEnd?: () => void;
+	onLoadStart?: () => void;
+	onRouteChange?: () => void;
 };
 export type RouteProps = {
 	path?: string;
