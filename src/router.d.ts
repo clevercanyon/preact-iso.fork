@@ -41,11 +41,8 @@ export type RouteContext = {
 
 	params: Record<string, string>;
 };
-export type RouteContextAsProps = RouteContext & {
-	// Component potentially added by `cloneElement`.
-	// Unused by routes, but types should reflect reality.
-	component?: AnyComponent<RouteContextAsProps>;
-};
+export type RouteContextAsProps = RouteContext & RouteProps;
+
 export function Router(props: RouterProps): VNode<RouterProps>;
 export function Location(props: LocationProps): VNode<LocationProps>;
 export function Route(props: RouteProps): VNode<RouteProps>;

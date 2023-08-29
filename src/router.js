@@ -75,6 +75,7 @@ export const useLocation = () => useContext(Location.ctx);
  */
 export function Router(props) {
 	const location = useLocation(); // Current location.
+	const context = useContext(Router.ctx); // Current context.
 	const [layoutTicks, updateLayoutTicks] = useReducer((c) => c + 1, 0);
 
 	const routeCounter = useRef(0);
@@ -106,8 +107,8 @@ export function Router(props) {
 		// Current route context props reflect the 'rest'.
 		// i,e., in current context of potentially nested routers.
 		const routeContextProps = {
-			path: location.restPath || location.path,
-			pathQuery: location.restPathQuery || location.pathQuery,
+			path: context.restPath || location.path,
+			pathQuery: context.restPathQuery || location.pathQuery,
 			restPath: '', // Potentially populated by `pathMatchesRoutePattern()`.
 			restPathQuery: '', // Potentially populated by `pathMatchesRoutePattern()`.
 			query: location.query, // Always the same ones.
