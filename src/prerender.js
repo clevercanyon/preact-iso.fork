@@ -45,7 +45,9 @@ export default async function prerender(vnode, options = {}) {
 		vnode = cloneElement(vnode, props);
 	}
 	const render = () => {
-		if (++tries > maxDepth) return;
+		if (++tries > maxDepth) {
+			return ''; // Failure.
+		}
 		try {
 			return renderToString(vnode);
 		} catch (e) {
