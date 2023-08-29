@@ -318,7 +318,7 @@ const pathMatchesRoutePattern = (path, routePattern, routeContextProps) => {
 	}
 	const pathParts = path.split('/').filter(Boolean);
 	const routePatternParts = routePattern.split('/').filter(Boolean);
-	const newRouteContextProps = { ...routeContextProps }; // Shallow clone.
+	const newRouteContextProps = structuredClone(routeContextProps); // Deep clone.
 
 	for (let i = 0; i < Math.max(pathParts.length, routePatternParts.length); i++) {
 		const pathPart = pathParts[i] || '';
