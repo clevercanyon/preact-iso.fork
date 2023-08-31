@@ -1,9 +1,10 @@
-import type { AnyComponent, ComponentChildren, VNode } from 'preact';
+import type { AnyComponent, RenderableProps, VNode } from 'preact';
 
-export type LocationProps = Readonly<{
-	children?: ComponentChildren;
-	url?: URL | string; // Required for SSR.
-}>;
+export type LocationProps = RenderableProps<
+	Readonly<{
+		url?: URL | string; // Required for SSR.
+	}>
+>;
 export type LocationContext = Readonly<{
 	state: {
 		wasPush: boolean;
@@ -20,17 +21,20 @@ export type LocationContext = Readonly<{
 	};
 	updateState: (pathQuery: string) => void;
 }>;
-export type RouterProps = Readonly<{
-	children?: ComponentChildren;
-	onLoadEnd?: () => void;
-	onLoadStart?: () => void;
-	onRouteChange?: () => void;
-}>;
-export type RouteProps = Readonly<{
-	path?: string;
-	default?: boolean;
-	component: AnyComponent<RouteContextAsProps>;
-}>;
+export type RouterProps = RenderableProps<
+	Readonly<{
+		onLoadEnd?: () => void;
+		onLoadStart?: () => void;
+		onRouteChange?: () => void;
+	}>
+>;
+export type RouteProps = RenderableProps<
+	Readonly<{
+		path?: string;
+		default?: boolean;
+		component: AnyComponent<RouteContextAsProps>;
+	}>
+>;
 export type RouteContext = Readonly<{
 	path: string;
 	pathQuery: string;
