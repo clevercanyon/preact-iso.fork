@@ -1,11 +1,11 @@
 import type { AnyComponent, VNode } from 'preact';
 
-export interface PrerenderOptions {
+export type PrerenderOptions = Readonly<{
 	maxDepth?: number;
 	props?: Record<string, unknown>;
-}
-export interface PrerenderResult {
+}>;
+export type PrerenderResult = {
 	html: string;
 	links: Set<string>;
-}
+};
 export default function prerender(vnode: AnyComponent | VNode, options?: PrerenderOptions): Promise<PrerenderResult>;
