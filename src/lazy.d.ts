@@ -1,4 +1,6 @@
 import type { VNode, RenderableProps } from 'preact';
 
-export default function lazy<T>(load: () => Promise<{ default: T } | T>): T;
-export function ErrorBoundary(props: RenderableProps<{ onError?: (error: Error) => void }>): VNode;
+export type ErrorBoundaryProps = RenderableProps<{ onError?: (error: Error) => void }>;
+
+export function ErrorBoundary(props: ErrorBoundaryProps): VNode;
+export function lazyComponent<T>(loader: () => Promise<{ default: T } | T>): T;
