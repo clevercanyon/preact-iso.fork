@@ -501,7 +501,7 @@ export default async ({ mode, command, ssrBuild: isSSRBuild }) => {
 		'**/node_modules/**',
 		'**/jspm_packages/**',
 		'**/bower_components/**',
-		'**/{x-*}/**', // Deliberate exclusions.
+		'**/x-*/**', // Deliberate exclusions.
 		...(vitestSandboxEnable ? [] : ['**/sandbox/**']),
 		'**/*.d.{ts,tsx,cts,ctsx,mts,mtsx}',
 	];

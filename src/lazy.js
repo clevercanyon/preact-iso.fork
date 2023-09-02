@@ -23,11 +23,11 @@ export function ErrorBoundary(props) {
 }
 
 /**
- * Lazy loader for components.
+ * Lazy loader for imports.
  *
  * @note Inspired by `Suspense` from preact/compat. See: <https://o5p.me/TA863r>.
  */
-export function lazyComponent(loader) {
+export function lazyImport(loader) {
 	let promise, component; // Initialize.
 
 	return (props) => {
