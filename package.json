@@ -3,7 +3,7 @@
     "publishConfig": {
         "access": "public"
     },
-    "version": "2.3.61",
+    "version": "2.3.62",
     "license": "GPL-3.0-or-later",
     "name": "@clevercanyon/preact-iso.fork",
     "description": "Isomorphic utilities for Preact.",
@@ -68,7 +68,7 @@
     "optionalDependencies": {},
     "bundleDependencies": [],
     "devDependencies": {
-        "@clevercanyon/dev-deps": "^1.0.229"
+        "@clevercanyon/dev-deps": "^1.0.230"
     },
     "overrides": {},
     "cpu": ["x64", "arm64"],
