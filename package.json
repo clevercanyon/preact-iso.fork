@@ -1,111 +1,111 @@
 {
-	"private": false,
-	"publishConfig": {
-		"access": "public"
-	},
-	"version": "2.3.59",
-	"license": "GPL-3.0-or-later",
-	"name": "@clevercanyon/preact-iso.fork",
-	"description": "Isomorphic utilities for Preact.",
-	"repository": "https://github.com/clevercanyon/preact-iso.fork",
-	"homepage": "https://github.com/clevercanyon/preact-iso.fork#readme",
-	"bugs": "https://github.com/clevercanyon/preact-iso.fork/issues",
-	"funding": "https://github.com/sponsors/clevercanyon",
-	"keywords": ["clevercanyon"],
-	"author": {
-		"name": "The Preact Authors",
-		"url": "https://preactjs.com"
-	},
-	"contributors": [
-		{
-			"name": "Clever Canyon",
-			"url": "https://clevercanyon.com"
-		}
-	],
-	"type": "module",
-	"files": ["/src/*.js", "/src/*.d.ts"],
-	"bin": {},
-	"imports": {},
-	"exports": {
-		".": {
-			"import": "./src/index.js",
-			"types": "./src/index.d.ts"
-		},
-		"./env": {
-			"import": "./src/env.js",
-			"types": "./src/env.d.ts"
-		},
-		"./router": {
-			"import": "./src/router.js",
-			"types": "./src/router.d.ts"
-		},
-		"./lazy": {
-			"import": "./src/lazy.js",
-			"types": "./src/lazy.d.ts"
-		},
-		"./hydrate": {
-			"import": "./src/hydrate.js",
-			"types": "./src/hydrate.d.ts"
-		},
-		"./prerender": {
-			"import": "./src/prerender.js",
-			"types": "./src/prerender.d.ts"
-		}
-	},
-	"sideEffects": [],
-	"module": "./src/index.js",
-	"main": "./src/index.js",
-	"browser": "./src/index.js",
-	"unpkg": "./src/index.js",
-	"types": "./src/index.d.ts",
-	"typesVersions": {},
-	"dependencies": {},
-	"peerDependencies": {
-		"preact": "^10.17.1",
-		"preact-render-to-string": "^6.2.1"
-	},
-	"peerDependenciesMeta": {},
-	"optionalDependencies": {},
-	"bundleDependencies": [],
-	"devDependencies": {
-		"@clevercanyon/dev-deps": "^1.0.215"
-	},
-	"overrides": {},
-	"cpu": ["x64", "arm64"],
-	"os": ["darwin", "linux"],
-	"engines": {
-		"node": "^19.1.0 || ^20.5.1",
-		"npm": "^8.19.3 || ^9.2.0"
-	},
-	"config": {
-		"c10n": {
-			"&": {
-				"dotfiles": {
-					"lock": []
-				},
-				"build": {
-					"appType": "",
-					"targetEnv": "",
-					"entryFiles": []
-				},
-				"ssrBuild": {
-					"appType": "",
-					"targetEnv": "",
-					"entryFiles": []
-				},
-				"github": {
-					"teams": {
-						"engineers": "pull",
-						"architects": "push"
-					},
-					"labels": {},
-					"configVersion": "1.0.9",
-					"envsVersion": ""
-				},
-				"npmjs": {
-					"configVersions": "1.0.9,1.0.9"
-				}
-			}
-		}
-	}
+    "private": false,
+    "publishConfig": {
+        "access": "public"
+    },
+    "version": "2.3.60",
+    "license": "GPL-3.0-or-later",
+    "name": "@clevercanyon/preact-iso.fork",
+    "description": "Isomorphic utilities for Preact.",
+    "repository": "https://github.com/clevercanyon/preact-iso.fork",
+    "homepage": "https://github.com/clevercanyon/preact-iso.fork#readme",
+    "bugs": "https://github.com/clevercanyon/preact-iso.fork/issues",
+    "funding": "https://github.com/sponsors/clevercanyon",
+    "keywords": ["clevercanyon"],
+    "author": {
+        "name": "The Preact Authors",
+        "url": "https://preactjs.com"
+    },
+    "contributors": [
+        {
+            "name": "Clever Canyon",
+            "url": "https://clevercanyon.com"
+        }
+    ],
+    "type": "module",
+    "files": ["/src/*.js", "/src/*.d.ts"],
+    "bin": {},
+    "imports": {},
+    "exports": {
+        ".": {
+            "import": "./src/index.js",
+            "types": "./src/index.d.ts"
+        },
+        "./env": {
+            "import": "./src/env.js",
+            "types": "./src/env.d.ts"
+        },
+        "./router": {
+            "import": "./src/router.js",
+            "types": "./src/router.d.ts"
+        },
+        "./lazy": {
+            "import": "./src/lazy.js",
+            "types": "./src/lazy.d.ts"
+        },
+        "./hydrate": {
+            "import": "./src/hydrate.js",
+            "types": "./src/hydrate.d.ts"
+        },
+        "./prerender": {
+            "import": "./src/prerender.js",
+            "types": "./src/prerender.d.ts"
+        }
+    },
+    "sideEffects": [],
+    "module": "./src/index.js",
+    "main": "./src/index.js",
+    "browser": "./src/index.js",
+    "unpkg": "./src/index.js",
+    "types": "./src/index.d.ts",
+    "typesVersions": {},
+    "dependencies": {},
+    "peerDependencies": {
+        "preact": "^10.17.1",
+        "preact-render-to-string": "^6.2.1"
+    },
+    "peerDependenciesMeta": {},
+    "optionalDependencies": {},
+    "bundleDependencies": [],
+    "devDependencies": {
+        "@clevercanyon/dev-deps": "^1.0.227"
+    },
+    "overrides": {},
+    "cpu": ["x64", "arm64"],
+    "os": ["darwin", "linux"],
+    "engines": {
+        "node": "^19.1.0 || ^20.5.1",
+        "npm": "^8.19.3 || ^9.2.0"
+    },
+    "config": {
+        "c10n": {
+            "&": {
+                "dotfiles": {
+                    "lock": []
+                },
+                "build": {
+                    "appType": "",
+                    "targetEnv": "",
+                    "entryFiles": []
+                },
+                "ssrBuild": {
+                    "appType": "",
+                    "targetEnv": "",
+                    "entryFiles": []
+                },
+                "github": {
+                    "teams": {
+                        "engineers": "pull",
+                        "architects": "push"
+                    },
+                    "labels": {},
+                    "configVersion": "1.0.9",
+                    "envsVersion": ""
+                },
+                "npmjs": {
+                    "configVersions": "1.0.9,1.0.9"
+                }
+            }
+        }
+    }
 }
