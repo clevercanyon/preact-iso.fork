@@ -7,7 +7,7 @@
  * @note This entire file will be updated automatically.
  * @note Instead of editing here, please review `./settings.mjs`.
  *
- * Last generated using `./settings.mjs` Thu, Sep 21, 2023, 6:01:07 AM EDT.
+ * Last generated using `./settings.mjs` Mon, Sep 25, 2023, 1:27:07 PM EDT.
  */
 {
     "editor.autoIndent": "full",
@@ -151,8 +151,8 @@
         },
         "@someday": {
             "scope": "workspace",
-            "iconColor": "#ead1dc",
-            "highlightColor": "#ead1dc",
+            "iconColor": "#6d718a",
+            "highlightColor": "#6d718a",
             "styleMode": "tag"
         }
     },

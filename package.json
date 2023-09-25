@@ -3,7 +3,7 @@
     "publishConfig": {
         "access": "public"
     },
-    "version": "2.3.62",
+    "version": "2.3.63",
     "license": "GPL-3.0-or-later",
     "name": "@clevercanyon/preact-iso.fork",
     "description": "Isomorphic utilities for Preact.",
@@ -28,28 +28,34 @@
     "imports": {},
     "exports": {
         ".": {
+            "types": "./src/index.d.ts",
             "import": "./src/index.js",
-            "types": "./src/index.d.ts"
+            "default": "./src/index.js"
         },
         "./env": {
+            "types": "./src/env.d.ts",
             "import": "./src/env.js",
-            "types": "./src/env.d.ts"
+            "default": "./src/env.js"
         },
         "./router": {
+            "types": "./src/router.d.ts",
             "import": "./src/router.js",
-            "types": "./src/router.d.ts"
+            "default": "./src/router.js"
         },
         "./lazy": {
+            "types": "./src/lazy.d.ts",
             "import": "./src/lazy.js",
-            "types": "./src/lazy.d.ts"
+            "default": "./src/lazy.js"
         },
         "./hydrate": {
+            "types": "./src/hydrate.d.ts",
             "import": "./src/hydrate.js",
-            "types": "./src/hydrate.d.ts"
+            "default": "./src/hydrate.js"
         },
         "./prerender": {
+            "types": "./src/prerender.d.ts",
             "import": "./src/prerender.js",
-            "types": "./src/prerender.d.ts"
+            "default": "./src/prerender.js"
         }
     },
     "sideEffects": [],
@@ -74,8 +80,8 @@
     "cpu": ["x64", "arm64"],
     "os": ["darwin", "linux"],
     "engines": {
-        "node": "^19.1.0 || ^20.5.1",
-        "npm": "^8.19.3 || ^9.2.0"
+        "node": "^19.1.0 || ^20.5.0",
+        "npm": "^8.19.3 || ^9.8.0 || ^10.0.0"
     },
     "config": {
         "c10n": {
@@ -86,12 +92,14 @@
                 "build": {
                     "appType": "",
                     "targetEnv": "",
-                    "entryFiles": []
+                    "entryFiles": [],
+                    "sideEffects": []
                 },
                 "ssrBuild": {
                     "appType": "",
                     "targetEnv": "",
-                    "entryFiles": []
+                    "entryFiles": [],
+                    "sideEffects": []
                 },
                 "github": {
                     "teams": {

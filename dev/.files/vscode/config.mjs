@@ -158,8 +158,8 @@ export default async () => {
             },
             '@someday': {
                 'scope': 'workspace',
-                'iconColor': '#ead1dc',
-                'highlightColor': '#ead1dc',
+                'iconColor': '#6d718a',
+                'highlightColor': '#6d718a',
                 'styleMode': 'tag',
             },
         },

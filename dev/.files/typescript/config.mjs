@@ -81,7 +81,6 @@ export default async () => {
 
             strict: true,
             skipLibCheck: true,
-            experimentalDecorators: true,
 
             target: esVersion.lcnYear,
             lib: [esVersion.lcnYear],

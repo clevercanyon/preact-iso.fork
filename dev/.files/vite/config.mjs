@@ -93,11 +93,12 @@ export default async ({ mode, command, ssrBuild: isSSRBuild }) => {
     const appType = $obp.get(pkg, 'config.c10n.&.' + (isSSRBuild ? 'ssrBuild' : 'build') + '.appType') || 'cma';
     const targetEnv = $obp.get(pkg, 'config.c10n.&.' + (isSSRBuild ? 'ssrBuild' : 'build') + '.targetEnv') || 'any';
     const entryFiles = $obp.get(pkg, 'config.c10n.&.' + (isSSRBuild ? 'ssrBuild' : 'build') + '.entryFiles') || [];
+    const sideEffects = $obp.get(pkg, 'config.c10n.&.' + (isSSRBuild ? 'ssrBuild' : 'build') + '.sideEffects') || [];
 
     const appDefaultEntryFiles = // Based on app type.
-		['spa'].includes(appType) ? ['./src/index.' + extensions.asBracedGlob([...extensions.trueHTML])]
-		: ['mpa'].includes(appType) ? ['./src/**/index.' + extensions.asBracedGlob([...extensions.trueHTML])]
-		: ['./src/*.' + extensions.asBracedGlob([...extensions.sTypeScript, ...extensions.sTypeScriptReact])]; // prettier-ignore
+        ['spa'].includes(appType) ? ['./src/index.' + extensions.asBracedGlob([...extensions.trueHTML])]
+        : ['mpa'].includes(appType) ? ['./src/**/index.' + extensions.asBracedGlob([...extensions.trueHTML])]
+        : ['./src/*.' + extensions.asBracedGlob([...extensions.sTypeScript, ...extensions.sTypeScriptReact])]; // prettier-ignore
 
     const appEntryFiles = (entryFiles.length ? entryFiles : appDefaultEntryFiles).map((v) => $str.lTrim(v, './'));
     const appEntries = appEntryFiles.length ? await $glob.promise(appEntryFiles, { cwd: projDir }) : [];
@@ -113,7 +114,7 @@ export default async ({ mode, command, ssrBuild: isSSRBuild }) => {
     const peerDepKeys = Object.keys(pkg.peerDependencies || {});
     const targetEnvIsServer = ['cfw', 'node'].includes(targetEnv);
     const useMinifier = 'dev' !== mode && !['lib'].includes(appType);
-    const preserveModules = ['lib'].includes(appType) && appEntries.length > 1;
+    const preserveModules = ['lib'].includes(appType); // Always preserve lib modules.
     const vitestSandboxEnable = $str.parseValue(String(process.env.VITEST_SANDBOX_ENABLE || ''));
     const vitestExamplesEnable = $str.parseValue(String(process.env.VITEST_EXAMPLES_ENABLE || ''));
 
@@ -146,7 +147,7 @@ export default async ({ mode, command, ssrBuild: isSSRBuild }) => {
      * Prepares `package.json` property updates.
      */
     const pkgUpdates = await vitePkgUpdates({
-        command, isSSRBuild, projDir, pkg, appType, targetEnv,
+        command, isSSRBuild, projDir, srcDir, distDir, pkg, appType, targetEnv, sideEffects,
         appEntriesAsProjRelPaths, appEntriesAsSrcSubpaths, appEntriesAsSrcSubpathsNoExt
     }); // prettier-ignore
 
@@ -172,7 +173,7 @@ export default async ({ mode, command, ssrBuild: isSSRBuild }) => {
     /**
      * Configures rollup for Vite.
      */
-    const rollupConfig = await viteRollupConfig({ srcDir, distDir, a16sDir, appEntries, peerDepKeys, preserveModules, useMinifier });
+    const rollupConfig = await viteRollupConfig({ srcDir, distDir, a16sDir, appEntries, sideEffects, useLibMode, peerDepKeys, preserveModules, useMinifier });
 
     /**
      * Configures tests for Vite.
@@ -229,7 +230,7 @@ export default async ({ mode, command, ssrBuild: isSSRBuild }) => {
 
         esbuild: esbuildConfig, // esBuild config options.
         build: /* <https://vitejs.dev/config/build-options.html> */ {
-            target: 'es' + esVersion.year, // Matches TypeScript config.
+            target: esVersion.lcnYear, // Matches TypeScript config.
 
             emptyOutDir: isSSRBuild ? false : true, // Not during SSR builds.
             outDir: path.relative(srcDir, distDir), // Relative to `root` directory.

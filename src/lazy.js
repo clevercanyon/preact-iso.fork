@@ -30,7 +30,7 @@ export function ErrorBoundary(props) {
 export function lazyRoute(loader) {
 	let promise, component; // Initialize.
 
-	return (props) => {
+	const Route = (props) => {
 		const r = useRef(component);
 		const [, update] = useState(0);
 
@@ -47,6 +47,10 @@ export function lazyRoute(loader) {
 		}
 		throw promise;
 	};
+    if (loader.name /* For debugging. */) {
+        Route.displayName = loader.name;
+    }
+    return Route; // Higher order component.
 }
 
 /**
