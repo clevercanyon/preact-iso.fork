@@ -17,7 +17,7 @@
 # Generated data.
 # <generated:start>
 
-# Last generated Mon, Sep 25, 2023, 1:27:07 PM EDT.
+# Last generated Wed, Sep 27, 2023, 6:51:15 PM EDT.
 
 # Locals
 
@@ -214,9 +214,11 @@ dist
 
 # npm:Configs
 
-tsconfig.*
-wrangler.*
 *.config.*
+wrangler.*
+tsconfig.*
+dev-types.d.ts
+package.json
 config.gypi
 
 # npm:Locks

@@ -7,6 +7,8 @@
  * @note This entire file will be updated automatically.
  * @note Instead of editing here, please review <https://github.com/clevercanyon/skeleton>.
  *
+ * @micromatch Tailwind uses micromatch with default options; i.e., `{ dot: false }`.
+ *
  * @see https://tailwindcss.com/docs/configuration
  */
 /*
@@ -95,7 +97,7 @@ export default /* not async compatible */ () => {
             // It’s also tricky because we *do* need to find content inside `node_modules/@clevercanyon/utilities/dist/preact`.
             // Therefore, instead of using `./.npmignore`, we come as close as we can, with just a few exceptions.
 
-            exclusions.asNegatedGlobs(
+            ...exclusions.asNegatedGlobs(
                 [
                     ...new Set([
                         ...exclusions.localIgnores,
