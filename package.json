@@ -3,7 +3,7 @@
     "publishConfig": {
         "access": "public"
     },
-    "version": "2.3.65",
+    "version": "2.3.66",
     "license": "GPL-3.0-or-later",
     "name": "@clevercanyon/preact-iso.fork",
     "description": "Isomorphic utilities for Preact.",
@@ -67,14 +67,14 @@
     "typesVersions": {},
     "dependencies": {},
     "peerDependencies": {
-        "preact": "^10.17.1",
+        "preact": "^10.18.0",
         "preact-render-to-string": "^6.2.1"
     },
     "peerDependenciesMeta": {},
     "optionalDependencies": {},
     "bundleDependencies": [],
     "devDependencies": {
-        "@clevercanyon/dev-deps": "^1.0.233"
+        "@clevercanyon/dev-deps": "^1.0.237"
     },
     "overrides": {},
     "cpu": ["x64", "arm64"],
