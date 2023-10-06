@@ -1,28 +1,9 @@
 /**
  * Preact ISO.
  */
-/* eslint-env es2021, browser */
 
-import { h, options, cloneElement } from 'preact';
+import { cloneElement, h } from 'preact';
 import { renderToString } from 'preact-render-to-string';
-
-/**
- * VNode hook reference.
- */
-let vnodeHook; // Initialize.
-
-/**
- * Previous vNode hook.
- */
-const prevVNodeHook = options.vnode;
-
-/**
- * Configures preact vNode hook.
- */
-options.vnode = (vnode) => {
-	if (prevVNodeHook) prevVNodeHook(vnode);
-	if (vnodeHook) vnodeHook(vnode);
-};
 
 /**
  * Prerenders a vNode tree.
@@ -33,40 +14,25 @@ options.vnode = (vnode) => {
  * @param {number}        [options.maxDepth=10] Max nested async operations to wait for before flushing.
  */
 export default async function prerender(vnode, options = {}) {
-	let tries = 0; // Initialize.
-	const links = new Set();
+    const { props = {}, maxDepth = 10 } = options;
+    let currentDepth = 0; // Initializes current depth.
 
-	const props = options.props;
-	const maxDepth = options.maxDepth || 10;
-
-	if ('function' === typeof vnode) {
-		vnode = h(vnode, props);
-	} else if (props) {
-		vnode = cloneElement(vnode, props);
-	}
-	const render = () => {
-		if (++tries > maxDepth) {
-			return ''; // Failure.
-		}
-		try {
-			return renderToString(vnode);
-		} catch (e) {
-			if (e && e.then) {
-				return e.then(render);
-			}
-			throw e;
-		}
-	};
-	vnodeHook = ({ type, props }) => {
-		if ('a' === type && props && props.href) {
-			if (!/^#/u.test(props.href) && /^(_?self)?$/iu.test(props.target || '')) {
-				links.add(props.href);
-			}
-		}
-	};
-	try {
-		return { html: await render(), links };
-	} finally {
-		vnodeHook = null;
-	}
+    if ('function' === typeof vnode) {
+        vnode = h(vnode, props);
+    } else if (props) {
+        vnode = cloneElement(vnode, props);
+    }
+    const render = () => {
+        if (++currentDepth > maxDepth) {
+            throw new Error('Max prerender depth: `' + maxDepth + '`.');
+        }
+        try {
+            return renderToString(vnode);
+        } catch (thrown) {
+            if (thrown && thrown.then) {
+                return thrown.then(render);
+            } else throw thrown;
+        }
+    };
+    return { html: await render() };
 }

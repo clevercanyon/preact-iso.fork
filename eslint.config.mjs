@@ -15,17 +15,8 @@ import { $obj } from './node_modules/@clevercanyon/utilities/dist/index.js';
  * Customizations.
  * <custom:start> */
 
-import extensions from './dev/.files/bin/includes/extensions.mjs';
-
 export default await (async () => {
-    return $obj.mergeDeep({}, await baseConfig(), {
-        $concat: {
-            'config[0].ignores': [
-                'index{,.d}.' + extensions.asBracedGlob([...extensions.allJavaScript, ...extensions.allTypeScript]), //
-                '{lib,src,tests}/**/*.' + extensions.asBracedGlob([...extensions.allJavaScript, ...extensions.allTypeScript]),
-            ],
-        },
-    }).config;
+    return $obj.mergeDeep({}, await baseConfig(), {}).config;
 })();
 
 /* </custom:end> */

@@ -3,7 +3,7 @@
     "publishConfig": {
         "access": "public"
     },
-    "version": "2.3.72",
+    "version": "2.3.73",
     "license": "GPL-3.0-or-later",
     "name": "@clevercanyon/preact-iso.fork",
     "description": "Isomorphic utilities for Preact.",
@@ -91,7 +91,7 @@
                 },
                 "build": {
                     "appType": "",
-                    "targetEnv": "",
+                    "targetEnv": "web",
                     "entryFiles": [],
                     "sideEffects": []
                 },

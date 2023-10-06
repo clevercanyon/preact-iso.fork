@@ -1,4 +1,4 @@
-import type { VNode, RenderableProps } from 'preact';
+import type { RenderableProps, VNode } from 'preact';
 
 export type ErrorBoundaryProps = RenderableProps<{ onError?: (error: Error) => void }>;
 

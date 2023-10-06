@@ -1,51 +1,51 @@
 import type { AnyComponent, RenderableProps, VNode } from 'preact';
 
 export type LocationProps = RenderableProps<
-	Readonly<{
-		url?: URL | string; // Required for SSR.
-	}>
+    Readonly<{
+        url?: URL | string; // Required for SSR.
+    }>
 >;
 export type LocationContext = Readonly<{
-	state: {
-		wasPush: boolean;
-		origin: string;
+    state: {
+        wasPush: boolean;
+        origin: string;
 
-		url: URL;
-		canonicalURL: URL;
+        url: URL;
+        canonicalURL: URL;
 
-		path: string;
-		pathQuery: string;
+        path: string;
+        pathQuery: string;
 
-		query: string;
-		queryVars: Record<string, string>;
-	};
-	updateState: (pathQuery: string) => void;
+        query: string;
+        queryVars: Record<string, string>;
+    };
+    updateState: (pathQuery: string) => void;
 }>;
 export type RouterProps = RenderableProps<
-	Readonly<{
-		onLoadEnd?: () => void;
-		onLoadStart?: () => void;
-		onRouteChange?: () => void;
-	}>
+    Readonly<{
+        onLoadEnd?: () => void;
+        onLoadStart?: () => void;
+        onRouteChange?: () => void;
+    }>
 >;
 export type RouteProps = RenderableProps<
-	Readonly<{
-		path?: string;
-		default?: boolean;
-		component: AnyComponent<RouteContextAsProps>;
-	}>
+    Readonly<{
+        path?: string;
+        default?: boolean;
+        component: AnyComponent<RouteContextAsProps>;
+    }>
 >;
 export type RouteContext = Readonly<{
-	path: string;
-	pathQuery: string;
+    path: string;
+    pathQuery: string;
 
-	restPath: string;
-	restPathQuery: string;
+    restPath: string;
+    restPathQuery: string;
 
-	query: string;
-	queryVars: Record<string, string>;
+    query: string;
+    queryVars: Record<string, string>;
 
-	params: Record<string, string>;
+    params: Record<string, string>;
 }>;
 export type RouteContextAsProps = RouteContext & RouteProps;
 

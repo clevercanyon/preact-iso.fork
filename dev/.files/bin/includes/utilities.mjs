@@ -1281,6 +1281,14 @@ export default class u {
         await u.spawn('npx', ['vite', 'build', '--mode', opts.mode]);
     }
 
+    /*
+     * Dotfile utilities.
+     */
+
+    static async updateDotfiles() {
+        await u.spawn('npx', ['@clevercanyon/madrun', 'update', 'dotfiles']);
+    }
+
     /**
      * Finale utilities.
      */

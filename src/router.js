@@ -1,17 +1,71 @@
 /**
  * Preact ISO.
  */
-/* eslint-env es2021, browser */
 
+import { cloneElement, createContext, h, toChildArray } from 'preact';
+import { useContext, useLayoutEffect, useMemo, useReducer, useRef } from 'preact/hooks';
 import { isWeb } from './env.js';
-import { h, createContext, cloneElement, toChildArray } from 'preact';
-import { useContext, useMemo, useReducer, useLayoutEffect, useRef } from 'preact/hooks';
 
 /**
- * Private variables needed below.
+ * Simply a resolved promise.
  */
-const RenderRef = ({ r }) => r.current;
 const resolvedPromise = Promise.resolve();
+
+/**
+ * Component that renders a ref’s `.current` value.
+ */
+const RenderRef = ({ r }) => r.current; // Fn component.
+
+/**
+ * Right trims trailing slashes.
+ *
+ * @param   str String to trim slashes from.
+ *
+ * @returns     String with no trailing slashes.
+ *
+ * @note This won’t trim a lone slash; i.e., root of site.
+ *
+ * @see https://regex101.com/r/xCaqwz/1
+ */
+const rSmartTrimSlashes = (str) => {
+    return str.replace(/(.)\/+$/u, '$1');
+};
+
+/**
+ * Escapes regular expression string.
+ *
+ * @param   str String to escape.
+ *
+ * @returns     Escaped string.
+ */
+const escRegExp = (str) => {
+    return str.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+};
+
+/**
+ * Removes base path from a URL path parts string.
+ *
+ * @param   baseURL         Base URL with a possible base path.
+ * @param   urlPathPartsStr URL path parts string to remove base path from.
+ *
+ * @returns                 `urlPathPartsStr` minus base path in `baseURL`.
+ */
+const removeBasePath = (baseURL, urlPathPartsStr) => {
+    const basePath = rSmartTrimSlashes(baseURL.pathname);
+    if (!basePath || '/' === basePath) return urlPathPartsStr; // Nothing to remove.
+    return urlPathPartsStr.replace(new RegExp('^' + escRegExp(basePath) + '($|[?#/])', 'u'), '$1');
+};
+
+/**
+ * Removes query and hash from a URL parts string.
+ *
+ * @param   urlPartsStr URL parts string to remove query and hash from.
+ *
+ * @returns             `urlPartsStr` minus query and hash.
+ */
+const removeQueryHash = (urlPartsStr) => {
+    return urlPartsStr.replace(/[?#].*$/u, '');
+};
 
 /**
  * Location component; i.e., context provider.
@@ -21,49 +75,48 @@ const resolvedPromise = Promise.resolve();
  * @returns       Location component; i.e., context provider.
  */
 export function Location(props) {
-	const [state, updateState] = useReducer(
-		locationReducer, // Location state reducer.
-		undefined, // Initial state produced by init function.
-		() => initialLocationState(props),
-	);
-	const context = /* Calculate only when state changes. */ useMemo(() => {
-		const url = new URL(state.pathQuery, state.origin);
+    const [state, updateState] = useReducer(
+        locationReducer, // Location state reducer.
+        undefined, // `undefined` arg to init function.
+        () => initialLocationState(props),
+    );
+    const context = /* Calculate only when state changes. */ useMemo(() => {
+        const url = new URL(state.pathQuery, state.baseURL);
+        url.pathname = rSmartTrimSlashes(url.pathname);
+        url.hash = ''; // Don't use this in routing.
 
-		url.pathname = url.pathname.replace(/(.)\/$/u, '$1');
-		url.hash = ''; // We don't ever use this in routing.
+        const canonicalURL = new URL(removeQueryHash(url.toString()));
+        canonicalURL.pathname = rSmartTrimSlashes(canonicalURL.pathname);
+        canonicalURL.hash = ''; // Don't use this in canonicals.
 
-		const canonicalURL = new URL(url.toString().replace(/[?#].*$/gu, ''));
-		canonicalURL.pathname = canonicalURL.pathname.replace(/(.)\/$/u, '$1');
+        return {
+            state: {
+                ...state,
 
-		return {
-			state: {
-				wasPush: state.wasPush,
-				origin: url.origin,
+                url, // URL object.
+                canonicalURL, // URL object.
 
-				url,
-				canonicalURL,
+                path: removeBasePath(state.baseURL, url.pathname),
+                pathQuery: removeBasePath(state.baseURL, url.pathname + url.search),
 
-				path: url.pathname,
-				pathQuery: url.pathname + url.search,
+                query: url.search, // Includes leading `?`.
+                queryVars: Object.fromEntries(url.searchParams),
+            },
+            updateState, // i.e., Location reducer updates state.
+        };
+    }, [state.wasPush, state.pathQuery]);
 
-				query: url.search, // Includes leading `?`.
-				queryVars: Object.fromEntries(url.searchParams),
-			},
-			updateState, // i.e., Location reducer updates state.
-		};
-	}, [state.wasPush, state.origin, state.pathQuery]);
+    useLayoutEffect(() => {
+        addEventListener('click', updateState);
+        addEventListener('popstate', updateState);
 
-	useLayoutEffect(() => {
-		addEventListener('click', updateState);
-		addEventListener('popstate', updateState);
+        return () => {
+            removeEventListener('click', updateState);
+            removeEventListener('popstate', updateState);
+        };
+    }, [state.wasPush, state.pathQuery]);
 
-		return () => {
-			removeEventListener('click', updateState);
-			removeEventListener('popstate', updateState);
-		};
-	}, [state.wasPush, state.origin, state.pathQuery]);
-
-	return h(Location.ctx.Provider, { value: context }, props.children);
+    return h(Location.ctx.Provider, { value: context }, props.children);
 }
 Location.ctx = createContext({}); // Location context.
 export const useLocation = () => useContext(Location.ctx);
@@ -76,126 +129,128 @@ export const useLocation = () => useContext(Location.ctx);
  * @returns       Rendered refs; i.e,. current and previous routes.
  */
 export function Router(props) {
-	const context = useContext(Router.ctx);
-	const { state: locState } = useLocation();
-	const [layoutTicks, updateLayoutTicks] = useReducer((c) => c + 1, 0);
+    const context = useRoute();
+    const { state: locState } = useLocation();
+    const [layoutTicks, updateLayoutTicks] = useReducer((c) => c + 1, 0);
 
-	const routeCounter = useRef(0);
-	const routerHasEverCommitted = useRef(false);
+    const routeCounter = useRef(0);
+    const routerHasEverCommitted = useRef(false);
 
-	const previousRoute = useRef();
-	const prevLocationWasPush = useRef(locState.wasPush);
-	const prevLocationOrigin = useRef(locState.origin);
-	const prevLocationPathQuery = useRef(locState.pathQuery);
+    const previousRoute = useRef();
+    const prevLocationWasPush = useRef(locState.wasPush);
+    const prevLocationPathQuery = useRef(locState.pathQuery);
 
-	const currentRoute = useRef();
-	const currentRouteDidSuspend = useRef();
-	const currentRouteIsLoading = useRef(false);
-	const currentRoutePendingHydrationDOM = useRef();
+    const currentRoute = useRef();
+    const currentRouteDidSuspend = useRef();
+    const currentRouteIsLoading = useRef(false);
+    const currentRoutePendingHydrationDOM = useRef();
 
-	currentRouteDidSuspend.current = false; // Reinitialize.
+    currentRouteDidSuspend.current = false; // Reinitialize.
 
-	// Memoize current route.
-	currentRoute.current = useMemo(() => {
-		let matchingChildVNode, defaultChildVNode;
+    // Memoizes current route.
+    currentRoute.current = useMemo(() => {
+        let matchingChildVNode, defaultChildVNode;
 
-		// Prevents diffing when we swap `cur` to `prev`.
-		if (this.__v && this.__v.__k) this.__v.__k.reverse();
+        // Prevents diffing when we swap `cur` to `prev`.
+        if (this.__v && this.__v.__k) this.__v.__k.reverse();
 
-		routeCounter.current++; // Increments monotonic route counter.
-		previousRoute.current = currentRoute.current; // Stores current as previous.
-		// Current route is being defined, so 'current' is actually previous here.
+        routeCounter.current++; // Increments monotonic route counter.
+        previousRoute.current = currentRoute.current; // Stores current as previous.
+        // ↑ Current route is being defined, so 'current' is actually previous here.
 
-		// Current route context props reflect the 'rest'.
-		// i,e., in current context of potentially nested routers.
-		let routeContextProps = {
-			path: context.restPath || locState.path,
-			pathQuery: context.restPathQuery || locState.pathQuery,
-			restPath: '', // Potentially populated by `pathMatchesRoutePattern()`.
-			restPathQuery: '', // Potentially populated by `pathMatchesRoutePattern()`.
-			query: locState.query, // Always the same ones.
-			queryVars: locState.queryVars, // Always the same ones.
-			params: {}, // Potentially populated by `pathMatchesRoutePattern()`.
-		};
-		toChildArray(props.children).some((childVNode) => {
-			let matchingRouteContextProps; // Initialize.
+        // Current route context props must reflect the 'rest*' props.
+        // i,e., In current context of potentially nested routers.
+        let routeContextProps = {
+            path: context.restPath || locState.path,
+            pathQuery: context.restPathQuery || locState.pathQuery,
 
-			if ((matchingRouteContextProps = pathMatchesRoutePattern(context.restPath || locState.path, childVNode.props.path, routeContextProps))) {
-				return (matchingChildVNode = cloneElement(childVNode, (routeContextProps = matchingRouteContextProps)));
-			}
-			if (childVNode.props.default) {
-				defaultChildVNode = cloneElement(childVNode, routeContextProps);
-			}
-		});
-		return h(Router.ctx.Provider, { value: routeContextProps }, matchingChildVNode || defaultChildVNode);
-	}, [locState.wasPush, locState.origin, locState.pathQuery]);
+            restPath: '', // Potentially populated by `pathMatchesRoutePattern()`.
+            restPathQuery: '', // Potentially populated by `pathMatchesRoutePattern()`.
 
-	// If rendering succeeds synchronously, we shouldn't render the previous children.
-	const previousRouteSnapshot = previousRoute.current;
-	previousRoute.current = null; // Reset previous children.
+            query: locState.query, // Always the same query vars across all nested routes.
+            queryVars: locState.queryVars, // Always the same query vars across all nested routes.
 
-	// Inspired by `_childDidSuspend()` solution from compat; learn more in `./lazy.js`.
-	// Minified `__c` = `_childDidSuspend()`. See: <https://o5p.me/3gXT4t>.
-	this.__c = (thrownPromise) => {
-		// Mark current render as having suspended.
-		currentRouteDidSuspend.current = true;
+            params: {}, // Potentially populated by `pathMatchesRoutePattern()`.
+        };
+        toChildArray(props.children).some((childVNode) => {
+            let matchingRouteContextProps; // Initialize.
 
-		// The new route suspended, so keep the previous route around while it loads.
-		previousRoute.current = previousRouteSnapshot;
+            if ((matchingRouteContextProps = pathMatchesRoutePattern(context.restPath || locState.path, childVNode.props.path, routeContextProps))) {
+                return (matchingChildVNode = cloneElement(childVNode, (routeContextProps = matchingRouteContextProps)));
+            }
+            if (childVNode.props.default) {
+                defaultChildVNode = cloneElement(childVNode, routeContextProps);
+            }
+        });
+        return h(Router.ctx.Provider, { value: routeContextProps }, matchingChildVNode || defaultChildVNode);
+    }, [locState.wasPush, locState.pathQuery]);
 
-		// Fire an event saying we're waiting for the route.
-		if (props.onLoadStart) props.onLoadStart();
+    // If rendering succeeds synchronously, we shouldn't render previous children.
+    const previousRouteSnapshot = previousRoute.current;
+    previousRoute.current = null; // Reset previous children.
 
-		// Flag as currently loading.
-		currentRouteIsLoading.current = true;
+    // Inspired by `_childDidSuspend()` solution from compat; learn more in `./lazy.js`.
+    // Minified `__c` = `_childDidSuspend()`. See: <https://o5p.me/3gXT4t>.
+    this.__c = (thrownPromise) => {
+        // Mark current render as having suspended.
+        currentRouteDidSuspend.current = true;
 
-		// Re-render on un-suspension.
-		const routeCounterSnapshot = routeCounter.current; // Snapshot.
+        // The new route suspended, so keep the previous route around while it loads.
+        previousRoute.current = previousRouteSnapshot;
 
-		thrownPromise.then((/* When no longer in a suspended state. */) => {
-			// Ignore this update if it isn't the most recently suspended update.
-			if (routeCounterSnapshot !== routeCounter.current) return;
+        // Fire an event saying we're waiting for the route.
+        if (props.onLoadStart) props.onLoadStart();
 
-			// Successful route transition: un-suspend after a tick and stop rendering the old route.
-			(previousRoute.current = null), resolvedPromise.then(updateLayoutTicks); // Triggers a new layout effect below.
-		});
-	};
-	useLayoutEffect(() => {
-		// Current route's hydration DOM.
-		const currentRouteHydrationDOM = this.__v?.__e;
+        // Flag as currently loading.
+        currentRouteIsLoading.current = true;
 
-		// Ignore suspended renders (failed commits).
-		if (currentRouteDidSuspend.current) {
-			// If we've never committed, mark any hydration DOM for removal on the next commit.
-			if (!routerHasEverCommitted.current && !currentRoutePendingHydrationDOM.current) {
-				currentRoutePendingHydrationDOM.current = currentRouteHydrationDOM;
-			}
-			return; // Stop here in this case.
-		}
-		// If this is the first ever successful commit and we didn't use the hydration DOM, remove it.
-		if (!routerHasEverCommitted.current && currentRoutePendingHydrationDOM.current) {
-			if (currentRoutePendingHydrationDOM.current !== currentRouteHydrationDOM) {
-				currentRoutePendingHydrationDOM.current.remove();
-			}
-			currentRoutePendingHydrationDOM.current = null; // Nullify after check complete.
-		}
-		// Mark router as having committed; i.e., as we are doing now.
-		routerHasEverCommitted.current = true; // Obviously true at this point.
+        // Re-render on un-suspension.
+        const routeCounterSnapshot = routeCounter.current; // Snapshot.
 
-		// The new current route is loaded and rendered?
-		if (prevLocationWasPush.current !== locState.wasPush || prevLocationOrigin.current !== locState.origin || prevLocationPathQuery.current !== locState.pathQuery) {
-			if (locState.wasPush) scrollTo(0, 0);
+        thrownPromise.then((/* When no longer in a suspended state. */) => {
+            // Ignore this update if it isn't the most recently suspended update.
+            if (routeCounterSnapshot !== routeCounter.current) return;
 
-			if (props.onLoadEnd && currentRouteIsLoading.current) props.onLoadEnd();
-			if (props.onRouteChange) props.onRouteChange();
+            // Successful route transition: un-suspend after a tick and stop rendering the old route.
+            (previousRoute.current = null), resolvedPromise.then(updateLayoutTicks); // Triggers a new layout effect below.
+        });
+    };
+    useLayoutEffect(() => {
+        // Current route's hydration DOM.
+        const currentRouteHydrationDOM = this.__v?.__e;
 
-			(prevLocationWasPush.current = locState.wasPush), (prevLocationOrigin.current = locState.origin), (prevLocationPathQuery.current = locState.path);
-			currentRouteIsLoading.current = false; // Loading complete.
-		}
-	}, [locState.wasPush, locState.origin, locState.pathQuery, layoutTicks]);
+        // Ignore suspended renders (failed commits).
+        if (currentRouteDidSuspend.current) {
+            // If we've never committed, mark any hydration DOM for removal on the next commit.
+            if (!routerHasEverCommitted.current && !currentRoutePendingHydrationDOM.current) {
+                currentRoutePendingHydrationDOM.current = currentRouteHydrationDOM;
+            }
+            return; // Stop here in this case.
+        }
+        // If this is the first ever successful commit and we didn't use the hydration DOM, remove it.
+        if (!routerHasEverCommitted.current && currentRoutePendingHydrationDOM.current) {
+            if (currentRoutePendingHydrationDOM.current !== currentRouteHydrationDOM) {
+                currentRoutePendingHydrationDOM.current.remove();
+            }
+            currentRoutePendingHydrationDOM.current = null; // Nullify after check complete.
+        }
+        // Mark router as having committed; i.e., as we are doing now.
+        routerHasEverCommitted.current = true; // Obviously true at this point.
 
-	// Note: `currentRoute` MUST render first in order to trigger a thrown promise.
-	return [h(RenderRef, { r: currentRoute }), h(RenderRef, { r: previousRoute })];
+        // The new current route is loaded and rendered?
+        if (prevLocationWasPush.current !== locState.wasPush || prevLocationPathQuery.current !== locState.pathQuery) {
+            if (locState.wasPush) scrollTo(0, 0);
+
+            if (props.onLoadEnd && currentRouteIsLoading.current) props.onLoadEnd();
+            if (props.onRouteChange) props.onRouteChange();
+
+            (prevLocationWasPush.current = locState.wasPush), (prevLocationPathQuery.current = locState.pathQuery);
+            currentRouteIsLoading.current = false; // Loading complete.
+        }
+    }, [locState.wasPush, locState.pathQuery, layoutTicks]);
+
+    // Note: `currentRoute` MUST render first to trigger a thrown promise.
+    return [h(RenderRef, { r: currentRoute }), h(RenderRef, { r: previousRoute })];
 }
 Router.ctx = createContext({}); // Router context.
 Router.Provider = Location; // Router's location provider.
@@ -210,22 +265,34 @@ export const useRoute = () => useContext(Router.ctx);
  * @returns       Initial location component state.
  */
 const initialLocationState = (props) => {
-	let url; // Initialize.
+    let baseURL, url; // Initialize.
 
-	if (props.url instanceof URL) {
-		url = props.url; // Easy peasy.
-		//
-	} else if ('string' === typeof props.url) {
-		url = new URL(props.url, isWeb ? location.origin : undefined);
-		//
-	} else {
-		url = new URL(isWeb ? location.href : '', isWeb ? location.origin : undefined);
-	}
-	return {
-		wasPush: true,
-		origin: url.origin,
-		pathQuery: url.pathname + url.search,
-	};
+    if (props.baseURL instanceof URL) {
+        baseURL = props.baseURL;
+    } else if ('string' === typeof props.baseURL && props.baseURL.length) {
+        baseURL = new URL(props.baseURL);
+    } else if (isWeb) {
+        baseURL = new URL(document.querySelector('head > base[href]')?.href || location.origin);
+    } else {
+        throw new Error('Missing `baseURL`.', props);
+    }
+    if (props.url instanceof URL) {
+        url = props.url;
+    } else if ('string' === typeof props.url && props.url.length) {
+        url = new URL(props.url, baseURL);
+    } else if (isWeb) {
+        url = new URL(location.href);
+    } else {
+        throw new Error('Missing `url`.', props);
+    }
+    if (baseURL.origin !== url.origin) {
+        throw new Error('URL `origin` mismatch.', { props, baseURL, url });
+    }
+    return {
+        wasPush: true,
+        baseURL: baseURL, // URL object.
+        pathQuery: removeBasePath(baseURL, url.pathname + url.search),
+    };
 };
 
 /**
@@ -237,69 +304,89 @@ const initialLocationState = (props) => {
  * @returns       Updated location state; else original state if no changes.
  */
 const locationReducer = (state, x) => {
-	let newURL, isPush, isClick; // Initialize.
+    let newURL, isPush, isClick; // Initialize.
 
-	if (null !== x && typeof x === 'object' && 'click' === x.type) {
-		isClick = isPush = true;
+    if (null !== x && typeof x === 'object' && 'click' === x.type) {
+        isClick = isPush = true; // Click event is a push.
 
-		if (!isWeb) {
-			return state; // Not possible.
-		}
-		if (typeof x.button === 'number' && 0 !== x.button) {
-			return state; // Already handled by browser.
-		}
-		if (x.ctrlKey || x.metaKey || x.altKey || x.shiftKey) {
-			return state; // Already handled by browser.
-		}
-		const a = x.target.closest('a[href]');
-		const aHref = a ? a.getAttribute('href') : '';
+        if (!isWeb) {
+            return state; // Not possible.
+        }
+        if (typeof x.button === 'number' && 0 !== x.button) {
+            // {@see https://o5p.me/OJrHBs} for details.
+            return state; // Not a left-click; let browser handle.
+        }
+        if (x.ctrlKey || x.metaKey || x.altKey || x.shiftKey) {
+            // {@see https://o5p.me/sxlcYO} for details.
+            return state; // Not a plain left-click; let browser handle.
+        }
+        const a = x.target.closest('a[href]');
+        const aHref = a ? a.getAttribute('href') : '';
 
-		if (!a || !a.href || !aHref) {
-			return state; // Not applicable.
-		}
-		if (/^#/u.test(aHref) || !/^(_?self)?$/iu.test(a.target)) {
-			return state; // Not applicable.
-		}
-		newURL = new URL(a.href, state.origin);
-		//
-	} else if (null !== x && typeof x === 'object' && 'popstate' === x.type) {
-		if (!isWeb) {
-			return state; // Not applicable.
-		}
-		newURL = new URL(location.href, state.origin);
-		//
-	} else if (null !== x && typeof x === 'object') {
-		isPush = true;
+        if (!a?.href?.length || !aHref?.length) {
+            return state; // Not applicable; no href value.
+        }
+        if ('#' === aHref[0] /* Ignores hashes on current path. */) {
+            return state; // Not applicable; i.e., simply an on-page hash change.
+        }
+        if (!/^(_?self)?$/iu.test(a.target) /* Ignores target !== `_self`. */) {
+            return state; // Not applicable; i.e., targets a different tab/window.
+        }
+        newURL = new URL(a.href);
+        //
+    } else if (null !== x && typeof x === 'object' && 'popstate' === x.type) {
+        // Popstate history event is a change, not a push.
 
-		if (!x.pathQuery || 'string' !== typeof x.pathQuery) {
-			return state; // Not applicable.
-		}
-		newURL = new URL(x.pathQuery, state.origin);
-		//
-	} else if (typeof x === 'string') {
-		isPush = true;
-		const pathQuery = x;
+        if (!isWeb) {
+            return state; // Not applicable.
+        }
+        newURL = new URL(location.href);
+        //
+    } else if (null !== x && typeof x === 'object') {
+        isPush = true; // Object passed in is a push.
 
-		if (!pathQuery) {
-			return state; // Not applicable.
-		}
-		newURL = new URL(pathQuery, state.origin);
-	}
-	if (!newURL || newURL.origin !== state.origin) {
-		return state; // Not applicable.
-	}
-	if (isClick && isWeb) x.preventDefault();
+        if ('string' !== typeof x.pathQuery || !x.pathQuery.length) {
+            return state; // Not applicable.
+        }
+        newURL = new URL(x.pathQuery, state.baseURL);
+        //
+    } else if (typeof x === 'string') {
+        isPush = true; // String passed in is a push.
 
-	if (true === isPush && isWeb) {
-		history.pushState(null, '', newURL);
-	} else if (false === isPush && isWeb) {
-		history.replaceState(null, '', newURL);
-	}
-	return {
-		wasPush: isPush,
-		origin: newURL.origin,
-		pathQuery: newURL.pathname + newURL.search,
-	};
+        const pathQuery = x; // As `pathQuery`.
+
+        if (!pathQuery.length) {
+            return state; // Not applicable.
+        }
+        newURL = new URL(pathQuery, state.baseURL);
+    }
+    if (!newURL /* Ignores empty URLs and/or invalid updates. */) {
+        return state; // Not applicable.
+    }
+    if (newURL.origin !== state.baseURL.origin /* Ignores external URLs. */) {
+        return state; // Not applicable.
+    }
+    if (!['http:', 'https:'].includes(newURL.protocol) /* Ignores `mailto:`, `tel:`, etc. */) {
+        return state; // Not applicable.
+    }
+    if (newURL.hash /* Ignores hashes on current `pathQuery`; let browser handle hash changes. */) {
+        const newPathQueryHash = removeBasePath(state.baseURL, newURL.pathname + newURL.search + newURL.hash);
+        if (new RegExp('^' + escRegExp(state.pathQuery) + '#', 'u').test(newPathQueryHash)) {
+            return state; // Not applicable; i.e., simply an on-page hash change.
+        }
+    }
+    if (isClick && isWeb) x.preventDefault();
+
+    if (true === isPush && isWeb) {
+        history.pushState(null, '', newURL);
+    } else if (false === isPush && isWeb) {
+        history.replaceState(null, '', newURL);
+    }
+    return {
+        ...state,
+        wasPush: isPush,
+        pathQuery: removeBasePath(state.baseURL, newURL.pathname + newURL.search),
+    };
 };
 
 /**
@@ -313,43 +400,43 @@ const locationReducer = (state, x) => {
  *   `undefined` is returned. It’s perfectly OK to use `!` when testing if the return value is falsy.
  */
 const pathMatchesRoutePattern = (path, routePattern, routeContextProps) => {
-	if (!path || !routePattern || !routeContextProps) {
-		return; // Not possible.
-	}
-	const pathParts = path.split('/').filter(Boolean);
-	const routePatternParts = routePattern.split('/').filter(Boolean);
-	const newRouteContextProps = structuredClone(routeContextProps); // Deep clone.
+    if (!path || !routePattern || !routeContextProps) {
+        return; // Not possible.
+    }
+    const pathParts = path.split('/').filter(Boolean);
+    const routePatternParts = routePattern.split('/').filter(Boolean);
+    const newRouteContextProps = structuredClone(routeContextProps); // Deep clone.
 
-	for (let i = 0; i < Math.max(pathParts.length, routePatternParts.length); i++) {
-		const pathPart = pathParts[i] || '';
-		const routePatternPart = routePatternParts[i] || '';
-		const [
-			unusedꓺ$0, // Using `$1...$3` only.
-			routePatternPartValueIsParam, // `$1`.
-			routePatternPartValue, // `$2`.
-			routePatternPartFlag, // `$3`.
-		] = routePatternPart.match(/^(:?)(.*?)([+*?]?)$/u);
+    for (let i = 0; i < Math.max(pathParts.length, routePatternParts.length); i++) {
+        const pathPart = pathParts[i] || '';
+        const routePatternPart = routePatternParts[i] || '';
+        const [
+            unusedꓺ$0, // Using `$1...$3` only.
+            routePatternPartValueIsParam, // `$1`.
+            routePatternPartValue, // `$2`.
+            routePatternPartFlag, // `$3`.
+        ] = routePatternPart.match(/^(:?)(.*?)([+*?]?)$/u);
 
-		if (routePatternPartValueIsParam) {
-			if (!pathPart && !['?', '*'].includes(routePatternPartFlag)) {
-				return; // Missing a required path part param.
-			}
-			if (['+', '*'].includes(routePatternPartFlag) /* Greedy param. */) {
-				newRouteContextProps.params[routePatternPartValue] = pathParts.slice(i).map(decodeURIComponent).join('/');
-				break; // We can stop here on greedy params; i.e., we’ve got everything in this param now.
-			} else if (pathPart) {
-				newRouteContextProps.params[routePatternPartValue] = decodeURIComponent(pathPart);
-			}
-		} else {
-			if (pathPart === routePatternPartValue) continue;
+        if (routePatternPartValueIsParam) {
+            if (!pathPart && !['?', '*'].includes(routePatternPartFlag)) {
+                return; // Missing a required path part param.
+            }
+            if (['+', '*'].includes(routePatternPartFlag) /* Greedy param. */) {
+                newRouteContextProps.params[routePatternPartValue] = pathParts.slice(i).map(decodeURIComponent).join('/');
+                break; // We can stop here on greedy params; i.e., we’ve got everything in this param now.
+            } else if (pathPart) {
+                newRouteContextProps.params[routePatternPartValue] = decodeURIComponent(pathPart);
+            }
+        } else {
+            if (pathPart === routePatternPartValue) continue;
 
-			if (pathPart && '*' === routePatternPartFlag) {
-				newRouteContextProps.restPath = '/' + pathParts.slice(i).map(decodeURIComponent).join('/');
-				newRouteContextProps.restPathQuery = newRouteContextProps.restPath + newRouteContextProps.query;
-				break; // We can stop here; i.e., the rest can be parsed by nested routes.
-			}
-			return; // Part is missing, or not an exact match, and not a wildcard `*` match either.
-		}
-	}
-	return newRouteContextProps;
+            if (pathPart && '*' === routePatternPartFlag) {
+                newRouteContextProps.restPath = '/' + pathParts.slice(i).map(decodeURIComponent).join('/');
+                newRouteContextProps.restPathQuery = newRouteContextProps.restPath + newRouteContextProps.query;
+                break; // We can stop here; i.e., the rest can be parsed by nested routes.
+            }
+            return; // Part is missing, or not an exact match, and not a wildcard `*` match either.
+        }
+    }
+    return newRouteContextProps;
 };
