@@ -30,14 +30,18 @@ export function Location(props) {
 
         return {
             state: {
-                ...state,
+                ...state, // Current state.
+                // `wasPush: boolean`, `base: URL`.
 
-                url, // URL object.
-                canonicalURL, // URL object.
+                // Full URLs.
+                url, // URL instance.
+                canonicalURL, // URL instance.
 
+                // These are `./` relative to base.
                 path: removeBasePath(toPath(url), state.base),
                 pathQuery: removeBasePath(toPathQuery(url), state.base),
 
+                // Query variables.
                 query: url.search, // Includes leading `?`.
                 queryVars: Object.fromEntries(url.searchParams),
             },
@@ -108,9 +112,11 @@ export function Router(props) {
             restPath: '', // Potentially populated by `pathMatchesRoutePattern()`.
             restPathQuery: '', // Potentially populated by `pathMatchesRoutePattern()`.
 
+            // Query variables.
             query: locState.query, // Always the same query vars across all nested routes.
             queryVars: locState.queryVars, // Always the same query vars across all nested routes.
 
+            // Path parameter keys/values.
             params: {}, // Potentially populated by `pathMatchesRoutePattern()`.
         };
         toChildArray(props.children).some((childVNode) => {
@@ -520,10 +526,12 @@ const pathMatchesRoutePattern = (path, routePattern, routeContext) => {
             if (!pathPart && !['?', '*'].includes(routePatternPartFlag)) {
                 return; // Missing a required path part param.
             }
-            if (['+', '*'].includes(routePatternPartFlag) /* Greedy param. */) {
+            if (['+', '*'].includes(routePatternPartFlag) /* Greedy. */) {
+                // Path parameter keys/values. Greedy, in this particular case.
                 newRouteContext.params[routePatternPartValue] = pathParts.slice(i).map(decodeURIComponent).join('/');
                 break; // We can stop here on greedy params; i.e., we’ve got everything in this param now.
             } else if (pathPart) {
+                // Path parameter keys/values. A single part in this case.
                 newRouteContext.params[routePatternPartValue] = decodeURIComponent(pathPart);
             }
         } else {

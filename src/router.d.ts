@@ -2,20 +2,25 @@ import type { AnyComponent, RenderableProps, VNode } from 'preact';
 
 export type LocationProps = RenderableProps<
     Readonly<{
-        url?: URL | string; // Required for SSR.
+        url?: URL | string;
+        base?: URL | string;
     }>
 >;
 export type LocationContext = Readonly<{
     state: {
+        // URL push?
         wasPush: boolean;
-        origin: string;
 
+        // Full URLs.
         url: URL;
+        base: URL;
         canonicalURL: URL;
 
+        // Relative `./` to base.
         path: string;
         pathQuery: string;
 
+        // Query variables.
         query: string;
         queryVars: Record<string, string>;
     };
@@ -36,15 +41,19 @@ export type RouteProps = RenderableProps<
     }>
 >;
 export type RouteContext = Readonly<{
+    // Relative `./` to base.
     path: string;
     pathQuery: string;
 
+    // Relative `./` to base.
     restPath: string;
     restPathQuery: string;
 
+    // Query variables.
     query: string;
     queryVars: Record<string, string>;
 
+    // Path parameter keys/values.
     params: Record<string, string>;
 }>;
 export type RouteContextAsProps = RouteContext;
