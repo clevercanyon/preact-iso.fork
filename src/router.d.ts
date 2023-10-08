@@ -47,7 +47,7 @@ export type RouteContext = Readonly<{
 
     params: Record<string, string>;
 }>;
-export type RouteContextAsProps = RouteContext & RouteProps;
+export type RouteContextAsProps = RouteContext;
 
 export function Router(props: RouterProps): VNode<RouterProps>;
 export function Location(props: LocationProps): VNode<LocationProps>;

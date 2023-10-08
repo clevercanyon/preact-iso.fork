@@ -7,67 +7,6 @@ import { useContext, useLayoutEffect, useMemo, useReducer, useRef } from 'preact
 import { isWeb } from './env.js';
 
 /**
- * Simply a resolved promise.
- */
-const resolvedPromise = Promise.resolve();
-
-/**
- * Component that renders a ref’s `.current` value.
- */
-const RenderRef = ({ r }) => r.current; // Fn component.
-
-/**
- * Right trims trailing slashes.
- *
- * @param   str String to trim slashes from.
- *
- * @returns     String with no trailing slashes.
- *
- * @note This won’t trim a lone slash; i.e., root of site.
- *
- * @see https://regex101.com/r/xCaqwz/1
- */
-const rSmartTrimSlashes = (str) => {
-    return str.replace(/(.)\/+$/u, '$1');
-};
-
-/**
- * Escapes regular expression string.
- *
- * @param   str String to escape.
- *
- * @returns     Escaped string.
- */
-const escRegExp = (str) => {
-    return str.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
-};
-
-/**
- * Removes base path from a URL path parts string.
- *
- * @param   baseURL         Base URL with a possible base path.
- * @param   urlPathPartsStr URL path parts string to remove base path from.
- *
- * @returns                 `urlPathPartsStr` minus base path in `baseURL`.
- */
-const removeBasePath = (baseURL, urlPathPartsStr) => {
-    const basePath = rSmartTrimSlashes(baseURL.pathname);
-    if (!basePath || '/' === basePath) return urlPathPartsStr; // Nothing to remove.
-    return urlPathPartsStr.replace(new RegExp('^' + escRegExp(basePath) + '($|[?#/])', 'u'), '$1');
-};
-
-/**
- * Removes query and hash from a URL parts string.
- *
- * @param   urlPartsStr URL parts string to remove query and hash from.
- *
- * @returns             `urlPartsStr` minus query and hash.
- */
-const removeQueryHash = (urlPartsStr) => {
-    return urlPartsStr.replace(/[?#].*$/u, '');
-};
-
-/**
  * Location component; i.e., context provider.
  *
  * @param   props Location component props.
@@ -81,7 +20,7 @@ export function Location(props) {
         () => initialLocationState(props),
     );
     const context = /* Calculate only when state changes. */ useMemo(() => {
-        const url = new URL(state.pathQuery, state.baseURL);
+        const url = new URL(state.pathQuery, state.base);
         url.pathname = rSmartTrimSlashes(url.pathname);
         url.hash = ''; // Don't use this in routing.
 
@@ -96,8 +35,8 @@ export function Location(props) {
                 url, // URL object.
                 canonicalURL, // URL object.
 
-                path: removeBasePath(state.baseURL, url.pathname),
-                pathQuery: removeBasePath(state.baseURL, url.pathname + url.search),
+                path: removeBasePath(toPath(url), state.base),
+                pathQuery: removeBasePath(toPathQuery(url), state.base),
 
                 query: url.search, // Includes leading `?`.
                 queryVars: Object.fromEntries(url.searchParams),
@@ -126,7 +65,7 @@ export const useLocation = () => useContext(Location.ctx);
  *
  * @param   props Router component props.
  *
- * @returns       Rendered refs; i.e,. current and previous routes.
+ * @returns       Rendered refs (current and previous routes).
  */
 export function Router(props) {
     const context = useRoute();
@@ -160,10 +99,12 @@ export function Router(props) {
 
         // Current route context props must reflect the 'rest*' props.
         // i,e., In current context of potentially nested routers.
-        let routeContextProps = {
+        let routeContext = {
+            // These are `./` relative to base.
             path: context.restPath || locState.path,
             pathQuery: context.restPathQuery || locState.pathQuery,
 
+            // These are `./` relative to base.
             restPath: '', // Potentially populated by `pathMatchesRoutePattern()`.
             restPathQuery: '', // Potentially populated by `pathMatchesRoutePattern()`.
 
@@ -173,16 +114,16 @@ export function Router(props) {
             params: {}, // Potentially populated by `pathMatchesRoutePattern()`.
         };
         toChildArray(props.children).some((childVNode) => {
-            let matchingRouteContextProps; // Initialize.
+            let matchingRouteContext; // Initialize.
 
-            if ((matchingRouteContextProps = pathMatchesRoutePattern(context.restPath || locState.path, childVNode.props.path, routeContextProps))) {
-                return (matchingChildVNode = cloneElement(childVNode, (routeContextProps = matchingRouteContextProps)));
+            if ((matchingRouteContext = pathMatchesRoutePattern(context.restPath || locState.path, childVNode.props.path, routeContext))) {
+                return (matchingChildVNode = cloneElement(childVNode, (routeContext = matchingRouteContext)));
             }
-            if (childVNode.props.default) {
-                defaultChildVNode = cloneElement(childVNode, routeContextProps);
+            if (!defaultChildVNode && childVNode.props.default) {
+                defaultChildVNode = cloneElement(childVNode, routeContext);
             }
         });
-        return h(Router.ctx.Provider, { value: routeContextProps }, matchingChildVNode || defaultChildVNode);
+        return h(Router.ctx.Provider, { value: routeContext }, matchingChildVNode || defaultChildVNode);
     }, [locState.wasPush, locState.pathQuery]);
 
     // If rendering succeeds synchronously, we shouldn't render previous children.
@@ -257,6 +198,147 @@ Router.Provider = Location; // Router's location provider.
 export const Route = (props) => h(props.component, props);
 export const useRoute = () => useContext(Router.ctx);
 
+/* ---
+ * Misc utilities.
+ */
+
+/**
+ * Simply a resolved promise.
+ */
+const resolvedPromise = Promise.resolve();
+
+/**
+ * Component that renders a ref’s `.current` value.
+ */
+const RenderRef = ({ r }) => r.current; // Function comp.
+
+/**
+ * Left trims leading slashes.
+ *
+ * @param   str String to trim slashes from.
+ *
+ * @returns     String with no leading slashes.
+ */
+const lTrimSlashes = (str) => {
+    return str.replace(/^\/+/u, '');
+};
+
+/**
+ * Left trims leading dots & slashes.
+ *
+ * @param   str String to trim dots & slashes from.
+ *
+ * @returns     String with no leading dots or slashes.
+ */
+const lTrimDotsSlashes = (str) => {
+    return str.replace(/^[./]+/u, '');
+};
+
+/**
+ * Right trims trailing slashes.
+ *
+ * @param   str String to trim slashes from.
+ *
+ * @returns     String with no trailing slashes.
+ */
+const rTrimSlashes = (str) => {
+    return str.replace(/\/+$/u, '');
+};
+
+/**
+ * Right smart-trims trailing slashes.
+ *
+ * @param   str String to smart-trim slashes from.
+ *
+ * @returns     String with no trailing slashes.
+ *
+ * @note This won’t trim a lone slash; i.e., root of site.
+ *
+ * @see https://regex101.com/r/xCaqwz/1
+ */
+const rSmartTrimSlashes = (str) => {
+    return str.replace(/(.)\/+$/u, '$1');
+};
+
+/**
+ * Escapes regular expression string.
+ *
+ * @param   str String to escape.
+ *
+ * @returns     Escaped string.
+ */
+const escRegExp = (str) => {
+    return str.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+};
+
+/**
+ * Extracts `/path` from a URL instance.
+ *
+ * @param   url A URL instance.
+ *
+ * @returns     Extracted `/path`.
+ */
+const toPath = (url) => {
+    return url.pathname;
+};
+
+/**
+ * Extracts `/path?query` from a URL instance.
+ *
+ * @param   url A URL instance.
+ *
+ * @returns     Extracted `/path?query`.
+ */
+const toPathQuery = (url) => {
+    return url.pathname + url.search;
+};
+
+/**
+ * Extracts `/path?query#hash` from a URL instance.
+ *
+ * @param   url A URL instance.
+ *
+ * @returns     Extracted `/path?query#hash`.
+ */
+const toPathQueryHash = (url) => {
+    return url.pathname + url.search + url.hash;
+};
+
+/**
+ * Removes `?query#hash` from a parseable URL or string.
+ *
+ * @param   parseable A parseable URL or string.
+ *
+ * @returns           Parseable URL or string without `?query#hash`.
+ */
+const removeQueryHash = (parseable) => {
+    return parseable.toString().replace(/[?#].*$/u, '');
+};
+
+/**
+ * Removes base path from a `/base/path?query#hash`.
+ *
+ * @param   pathQueryHash `/base/path?query#hash` string.
+ * @param   base          Base URL instance with a possible `/base/` path.
+ *
+ * @returns               `./path?query#hash`; i.e, relative, without base path.
+ *
+ * @note See also: `@clevercanyon/utilities/$url.removeBasePath()`.
+ */
+const removeBasePath = (pathQueryHash, base) => {
+    let baseDirPath = base.pathname; // Initialize.
+
+    if (baseDirPath && !baseDirPath.endsWith('/')) {
+        baseDirPath = baseDirPath.replace(/\/[^/]+$/u, '/');
+    }
+    pathQueryHash = '/' + lTrimDotsSlashes(pathQueryHash); // Ensure root-relative.
+
+    if (!['', '/'].includes(baseDirPath) /* Saves time. */) {
+        pathQueryHash = pathQueryHash.replace(new RegExp('^' + escRegExp(rTrimSlashes(baseDirPath)) + '(?:$|/|([?#]))', 'u'), '$1');
+    }
+    return './' + lTrimSlashes(pathQueryHash); // Ensures a relative path with substance; i.e., no empty string.
+};
+
 /**
  * Initial location component state.
  *
@@ -265,33 +347,41 @@ export const useRoute = () => useContext(Router.ctx);
  * @returns       Initial location component state.
  */
 const initialLocationState = (props) => {
-    let baseURL, url; // Initialize.
+    let { url, base } = props; // Initialize.
 
-    if (props.baseURL instanceof URL) {
-        baseURL = props.baseURL;
-    } else if ('string' === typeof props.baseURL && props.baseURL.length) {
-        baseURL = new URL(props.baseURL);
+    if (base instanceof URL) {
+        // Nothing to do. Already a URL instance.
+    } else if ('string' === typeof base && base) {
+        base = new URL(base);
     } else if (isWeb) {
-        baseURL = new URL(document.querySelector('head > base[href]')?.href || location.origin);
+        base = document.baseURI;
     } else {
-        throw new Error('Missing `baseURL`.', props);
+        throw new Error('Missing `base`.', props);
     }
-    if (props.url instanceof URL) {
-        url = props.url;
-    } else if ('string' === typeof props.url && props.url.length) {
-        url = new URL(props.url, baseURL);
+    // We intentionally do not trim a trailing slash from the base URL.
+    // The trailing slash is important to `URL()` when forming paths from base.
+    base.hash = ''; // We don't use this in any routing.
+
+    if (url instanceof URL) {
+        // Nothing to do. Already a URL instance.
+    } else if ('string' === typeof url && url) {
+        url = new URL(url, base);
     } else if (isWeb) {
         url = new URL(location.href);
     } else {
         throw new Error('Missing `url`.', props);
     }
-    if (baseURL.origin !== url.origin) {
-        throw new Error('URL `origin` mismatch.', { props, baseURL, url });
+    url.pathname = rSmartTrimSlashes(url.pathname);
+    url.hash = ''; // We don't use this in any routing.
+
+    if (url.origin !== base.origin) {
+        throw new Error('URL `origin` mismatch.', { url, base, props });
     }
     return {
         wasPush: true,
-        baseURL: baseURL, // URL object.
-        pathQuery: removeBasePath(baseURL, url.pathname + url.search),
+        base, // Does not change.
+        // This is `./` relative to base.
+        pathQuery: removeBasePath(toPathQuery(url), base),
     };
 };
 
@@ -304,7 +394,7 @@ const initialLocationState = (props) => {
  * @returns       Updated location state; else original state if no changes.
  */
 const locationReducer = (state, x) => {
-    let newURL, isPush, isClick; // Initialize.
+    let url, isPush, isClick; // Initialize.
 
     if (null !== x && typeof x === 'object' && 'click' === x.type) {
         isClick = isPush = true; // Click event is a push.
@@ -323,7 +413,7 @@ const locationReducer = (state, x) => {
         const a = x.target.closest('a[href]');
         const aHref = a ? a.getAttribute('href') : '';
 
-        if (!a?.href?.length || !aHref?.length) {
+        if (!a || !a.href || !aHref) {
             return state; // Not applicable; no href value.
         }
         if ('#' === aHref[0] /* Ignores hashes on current path. */) {
@@ -332,7 +422,7 @@ const locationReducer = (state, x) => {
         if (!/^(_?self)?$/iu.test(a.target) /* Ignores target !== `_self`. */) {
             return state; // Not applicable; i.e., targets a different tab/window.
         }
-        newURL = new URL(a.href);
+        url = new URL(a.href, state.base);
         //
     } else if (null !== x && typeof x === 'object' && 'popstate' === x.type) {
         // Popstate history event is a change, not a push.
@@ -340,37 +430,37 @@ const locationReducer = (state, x) => {
         if (!isWeb) {
             return state; // Not applicable.
         }
-        newURL = new URL(location.href);
+        url = new URL(location.href, state.base);
         //
     } else if (null !== x && typeof x === 'object') {
         isPush = true; // Object passed in is a push.
 
-        if ('string' !== typeof x.pathQuery || !x.pathQuery.length) {
+        if ('string' !== typeof x.pathQuery || !x.pathQuery) {
             return state; // Not applicable.
         }
-        newURL = new URL(x.pathQuery, state.baseURL);
+        url = new URL(lTrimSlashes(x.pathQuery), state.base);
         //
     } else if (typeof x === 'string') {
         isPush = true; // String passed in is a push.
 
         const pathQuery = x; // As `pathQuery`.
 
-        if (!pathQuery.length) {
+        if (!pathQuery) {
             return state; // Not applicable.
         }
-        newURL = new URL(pathQuery, state.baseURL);
+        url = new URL(lTrimSlashes(pathQuery), state.base);
     }
-    if (!newURL /* Ignores empty URLs and/or invalid updates. */) {
+    if (!url /* Ignores empty URLs and/or invalid updates. */) {
         return state; // Not applicable.
     }
-    if (newURL.origin !== state.baseURL.origin /* Ignores external URLs. */) {
+    if (url.origin !== state.base.origin /* Ignores external URLs. */) {
         return state; // Not applicable.
     }
-    if (!['http:', 'https:'].includes(newURL.protocol) /* Ignores `mailto:`, `tel:`, etc. */) {
+    if (!['http:', 'https:'].includes(url.protocol) /* Ignores `mailto:`, `tel:`, etc. */) {
         return state; // Not applicable.
     }
-    if (newURL.hash /* Ignores hashes on current `pathQuery`; let browser handle hash changes. */) {
-        const newPathQueryHash = removeBasePath(state.baseURL, newURL.pathname + newURL.search + newURL.hash);
+    if (url.hash /* Ignores hashes on current `pathQuery`; i.e., let browser handle hash changes. */) {
+        const newPathQueryHash = removeBasePath(toPathQueryHash(url), state.base);
         if (new RegExp('^' + escRegExp(state.pathQuery) + '#', 'u').test(newPathQueryHash)) {
             return state; // Not applicable; i.e., simply an on-page hash change.
         }
@@ -378,38 +468,47 @@ const locationReducer = (state, x) => {
     if (isClick && isWeb) x.preventDefault();
 
     if (true === isPush && isWeb) {
-        history.pushState(null, '', newURL);
+        history.pushState(null, '', url);
     } else if (false === isPush && isWeb) {
-        history.replaceState(null, '', newURL);
+        history.replaceState(null, '', url);
     }
     return {
         ...state,
         wasPush: isPush,
-        pathQuery: removeBasePath(state.baseURL, newURL.pathname + newURL.search),
+        // This is `./` relative to base.
+        pathQuery: removeBasePath(toPathQuery(url), state.base),
     };
 };
 
 /**
  * Path checker; i.e., checks if a path matches a route pattern.
  *
- * @param   path              Location path to compare/check.
- * @param   routePattern      Route pattern to compare/check.
- * @param   routeContextProps Route (child of Router) context props.
+ * @param   path         Relative location path; e.g., `./path/foo/bar` | `/path/foo/bar` | `path/foo/bar`.
+ * @param   routePattern Relative route pattern; e.g., `./path/foo/*` | `/path/foo/*` | `path/foo/*`.
+ * @param   routeContext Route context; {@see RouteContext}.
  *
- * @returns                   New `routeContextProps` when path matches route. When path does not match route pattern,
+ * @returns              A New `routeContext` clone when path matches route. When path does not match route pattern,
  *   `undefined` is returned. It’s perfectly OK to use `!` when testing if the return value is falsy.
  */
-const pathMatchesRoutePattern = (path, routePattern, routeContextProps) => {
-    if (!path || !routePattern || !routeContextProps) {
+const pathMatchesRoutePattern = (path, routePattern, routeContext) => {
+    if (!path || !routePattern || !routeContext) {
         return; // Not possible.
     }
-    const pathParts = path.split('/').filter(Boolean);
-    const routePatternParts = routePattern.split('/').filter(Boolean);
-    const newRouteContextProps = structuredClone(routeContextProps); // Deep clone.
+    // These are `./` relative to base.
+    const pathParts = lTrimDotsSlashes(path).split('/').filter(Boolean);
+    const routePatternParts = lTrimDotsSlashes(routePattern).split('/').filter(Boolean);
 
+    // Produces a deep clone that we may return.
+    const newRouteContext = structuredClone(routeContext);
+
+    // In the case of no parts whatsoever, that is not a match.
+    if (!pathParts.length && !routePatternParts.length) return;
+
+    // Iterates all parts of the longest between path and route pattern.
     for (let i = 0; i < Math.max(pathParts.length, routePatternParts.length); i++) {
-        const pathPart = pathParts[i] || '';
-        const routePatternPart = routePatternParts[i] || '';
+        const pathPart = pathParts[i] || ''; // Default is empty string.
+        const routePatternPart = routePatternParts[i] || ''; // Default is empty string.
+
         const [
             unusedꓺ$0, // Using `$1...$3` only.
             routePatternPartValueIsParam, // `$1`.
@@ -422,21 +521,22 @@ const pathMatchesRoutePattern = (path, routePattern, routeContextProps) => {
                 return; // Missing a required path part param.
             }
             if (['+', '*'].includes(routePatternPartFlag) /* Greedy param. */) {
-                newRouteContextProps.params[routePatternPartValue] = pathParts.slice(i).map(decodeURIComponent).join('/');
+                newRouteContext.params[routePatternPartValue] = pathParts.slice(i).map(decodeURIComponent).join('/');
                 break; // We can stop here on greedy params; i.e., we’ve got everything in this param now.
             } else if (pathPart) {
-                newRouteContextProps.params[routePatternPartValue] = decodeURIComponent(pathPart);
+                newRouteContext.params[routePatternPartValue] = decodeURIComponent(pathPart);
             }
         } else {
             if (pathPart === routePatternPartValue) continue;
 
             if (pathPart && '*' === routePatternPartFlag) {
-                newRouteContextProps.restPath = '/' + pathParts.slice(i).map(decodeURIComponent).join('/');
-                newRouteContextProps.restPathQuery = newRouteContextProps.restPath + newRouteContextProps.query;
+                // These are `./` relative to base.
+                newRouteContext.restPath = './' + pathParts.slice(i).join('/');
+                newRouteContext.restPathQuery = newRouteContext.restPath + newRouteContext.query;
                 break; // We can stop here; i.e., the rest can be parsed by nested routes.
             }
             return; // Part is missing, or not an exact match, and not a wildcard `*` match either.
         }
     }
-    return newRouteContextProps;
+    return newRouteContext;
 };
