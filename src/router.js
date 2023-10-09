@@ -409,10 +409,10 @@ const pathMatchesRoutePattern = (path, routePattern, routeContext) => {
     // Produces a deep clone that we may return.
     const newRouteContext = structuredClone(routeContext);
 
-    // In the case of no parts whatsoever, that is not a match.
-    if (!pathParts.length && !routePatternParts.length) return;
-
     // Iterates all parts of the longest between path and route pattern.
+    // In the case of no parts whatsoever, across both of them, that’s also a match.
+    // e.g., If the current path is `./` matched by a pattern of `./`, both are empty.
+
     for (let i = 0; i < Math.max(pathParts.length, routePatternParts.length); i++) {
         const pathPart = pathParts[i] || ''; // Default is empty string.
         const routePatternPart = routePatternParts[i] || ''; // Default is empty string.
