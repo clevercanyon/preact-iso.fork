@@ -2,9 +2,9 @@
  * Preact ISO.
  */
 
+import { $env, $is, $str, $url } from '@clevercanyon/utilities';
 import { cloneElement, createContext, h, toChildArray } from 'preact';
 import { useContext, useLayoutEffect, useMemo, useReducer, useRef } from 'preact/hooks';
-import { isWeb } from './env.js';
 
 /**
  * Location component; i.e., context provider.
@@ -20,30 +20,33 @@ export function Location(props) {
         () => initialLocationState(props),
     );
     const context = /* Calculate only when state changes. */ useMemo(() => {
-        const url = new URL(state.pathQuery, state.base);
-        url.pathname = rSmartTrimSlashes(url.pathname);
-        url.hash = ''; // Don't use this in routing.
+        const url = $url.parse(state.pathQuery, state.base);
+        const canonicalURL = $url.parse($url.toCanonical(url));
 
-        const canonicalURL = new URL(removeQueryHash(url.toString()));
-        canonicalURL.pathname = rSmartTrimSlashes(canonicalURL.pathname);
-        canonicalURL.hash = ''; // Don't use this in canonicals.
+        // Forces a canonical path for consistency.
+        url.pathname = canonicalURL.pathname; // Consistency.
 
         return {
             state: {
-                ...state, // Current state.
-                // `wasPush: boolean`, `base: URL`.
+                ...state, // State.
+                // `wasPush: boolean`.
 
-                // Full URLs.
+                // Base URL.
+                base: state.base, // URL instance.
+                // ↓ Typically has a trailing slash.
+                basePath: $url.toPath(state.base),
+
+                // Current URL w/o hash.
                 url, // URL instance.
                 canonicalURL, // URL instance.
 
                 // These are `./` relative to base.
-                path: removeBasePath(toPath(url), state.base),
-                pathQuery: removeBasePath(toPathQuery(url), state.base),
+                path: $url.removeBasePath($url.toPath(url), state.base),
+                pathQuery: $url.removeBasePath($url.toPathQuery(url), state.base),
 
                 // Query variables.
-                query: url.search, // Includes leading `?`.
-                queryVars: Object.fromEntries(url.searchParams),
+                query: url.search, // Leading `?`.
+                queryVars: $url.getQueryVars(url),
             },
             updateState, // i.e., Location reducer updates state.
         };
@@ -186,8 +189,14 @@ export function Router(props) {
 
         // The new current route is loaded and rendered?
         if (prevLocationWasPush.current !== locState.wasPush || prevLocationPathQuery.current !== locState.pathQuery) {
-            if (locState.wasPush) scrollTo(0, 0);
+            if (locState.wasPush && $env.isWeb() /* Handles scroll location. */) {
+                const currentHash = $url.currentHash(); // e.g., `element-id`.
+                const currentHashElementById = currentHash ? document.getElementById(currentHash) : null;
 
+                if (currentHashElementById) {
+                    currentHashElementById.scrollIntoView();
+                } else scrollTo(0, 0); // To top of page.
+            }
             if (props.onLoadEnd && currentRouteIsLoading.current) props.onLoadEnd();
             if (props.onRouteChange) props.onRouteChange();
 
@@ -219,133 +228,6 @@ const resolvedPromise = Promise.resolve();
 const RenderRef = ({ r }) => r.current; // Function comp.
 
 /**
- * Left trims leading slashes.
- *
- * @param   str String to trim slashes from.
- *
- * @returns     String with no leading slashes.
- */
-const lTrimSlashes = (str) => {
-    return str.replace(/^\/+/u, '');
-};
-
-/**
- * Left trims leading dots & slashes.
- *
- * @param   str String to trim dots & slashes from.
- *
- * @returns     String with no leading dots or slashes.
- */
-const lTrimDotsSlashes = (str) => {
-    return str.replace(/^[./]+/u, '');
-};
-
-/**
- * Right trims trailing slashes.
- *
- * @param   str String to trim slashes from.
- *
- * @returns     String with no trailing slashes.
- */
-const rTrimSlashes = (str) => {
-    return str.replace(/\/+$/u, '');
-};
-
-/**
- * Right smart-trims trailing slashes.
- *
- * @param   str String to smart-trim slashes from.
- *
- * @returns     String with no trailing slashes.
- *
- * @note This won’t trim a lone slash; i.e., root of site.
- *
- * @see https://regex101.com/r/xCaqwz/1
- */
-const rSmartTrimSlashes = (str) => {
-    return str.replace(/(.)\/+$/u, '$1');
-};
-
-/**
- * Escapes regular expression string.
- *
- * @param   str String to escape.
- *
- * @returns     Escaped string.
- */
-const escRegExp = (str) => {
-    return str.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
-};
-
-/**
- * Extracts `/path` from a URL instance.
- *
- * @param   url A URL instance.
- *
- * @returns     Extracted `/path`.
- */
-const toPath = (url) => {
-    return url.pathname;
-};
-
-/**
- * Extracts `/path?query` from a URL instance.
- *
- * @param   url A URL instance.
- *
- * @returns     Extracted `/path?query`.
- */
-const toPathQuery = (url) => {
-    return url.pathname + url.search;
-};
-
-/**
- * Extracts `/path?query#hash` from a URL instance.
- *
- * @param   url A URL instance.
- *
- * @returns     Extracted `/path?query#hash`.
- */
-const toPathQueryHash = (url) => {
-    return url.pathname + url.search + url.hash;
-};
-
-/**
- * Removes `?query#hash` from a parseable URL or string.
- *
- * @param   parseable A parseable URL or string.
- *
- * @returns           Parseable URL or string without `?query#hash`.
- */
-const removeQueryHash = (parseable) => {
-    return parseable.toString().replace(/[?#].*$/u, '');
-};
-
-/**
- * Removes base path from a `/base/path?query#hash`.
- *
- * @param   pathQueryHash `/base/path?query#hash` string.
- * @param   base          Base URL instance with a possible `/base/` path.
- *
- * @returns               `./path?query#hash`; i.e, relative, without base path.
- *
- * @note See also: `@clevercanyon/utilities/$url.removeBasePath()`.
- */
-const removeBasePath = (pathQueryHash, base) => {
-    let baseDirPath = base.pathname; // Initialize.
-
-    if (baseDirPath && !baseDirPath.endsWith('/')) {
-        baseDirPath = baseDirPath.replace(/\/[^/]+$/u, '/');
-    }
-    pathQueryHash = '/' + lTrimDotsSlashes(pathQueryHash); // Ensure root-relative.
-
-    if (!['', '/'].includes(baseDirPath) /* Saves time. */) {
-        pathQueryHash = pathQueryHash.replace(new RegExp('^' + escRegExp(rTrimSlashes(baseDirPath)) + '(?:$|/|([?#]))', 'u'), '$1');
-    }
-    return './' + lTrimSlashes(pathQueryHash); // Ensures a relative path with substance; i.e., no empty string.
-};
-
-/**
  * Initial location component state.
  *
  * @param   props Location component props.
@@ -355,39 +237,38 @@ const removeBasePath = (pathQueryHash, base) => {
 const initialLocationState = (props) => {
     let { url, base } = props; // Initialize.
 
-    if (base instanceof URL) {
-        // Nothing to do. Already a URL instance.
-    } else if ('string' === typeof base && base) {
-        base = new URL(base);
-    } else if (isWeb) {
-        base = document.baseURI;
+    if (base && $is.url(base)) {
+        base = $url.parse(base);
+    } else if (base && $is.string(base)) {
+        base = $url.parse(base);
+    } else if ($env.isWeb()) {
+        base = $url.parse($url.currentBase());
     } else {
         throw new Error('Missing `base`.', props);
     }
     // We intentionally do not trim a trailing slash from the base URL.
     // The trailing slash is important to `URL()` when forming paths from base.
-    base.hash = ''; // We don't use this in any routing.
 
-    if (url instanceof URL) {
-        // Nothing to do. Already a URL instance.
-    } else if ('string' === typeof url && url) {
-        url = new URL(url, base);
-    } else if (isWeb) {
-        url = new URL(location.href);
+    if (url && $is.url(url)) {
+        url = $url.parse(url);
+    } else if (url && $is.string(url)) {
+        url = $url.parse(url, base);
+    } else if ($env.isWeb()) {
+        url = $url.parse($url.current());
     } else {
         throw new Error('Missing `url`.', props);
     }
-    url.pathname = rSmartTrimSlashes(url.pathname);
-    url.hash = ''; // We don't use this in any routing.
+    // Forces a canonical path for consistency.
+    url.pathname = $url.parse($url.toCanonical(url)).pathname;
 
     if (url.origin !== base.origin) {
-        throw new Error('URL `origin` mismatch.', { url, base, props });
+        throw new Error('URL `origin` mismatch.', { url, base });
     }
     return {
         wasPush: true,
         base, // Does not change.
         // This is `./` relative to base.
-        pathQuery: removeBasePath(toPathQuery(url), base),
+        pathQuery: $url.removeBasePath($url.toPathQuery(url), base),
     };
 };
 
@@ -395,17 +276,19 @@ const initialLocationState = (props) => {
  * Reduces location state.
  *
  * @param   state Current location state.
- * @param   x     Event, state updates, or new `pathQuery` string.
+ * @param   x     Event or another type of state update.
  *
- * @returns       Updated location state; else original state if no changes.
+ * @returns       New state; else original state if no changes.
  */
 const locationReducer = (state, x) => {
     let url, isPush, isClick; // Initialize.
+    // ---
+    // Case handlers for various types of state updates.
 
     if (null !== x && typeof x === 'object' && 'click' === x.type) {
         isClick = isPush = true; // Click event is a push.
 
-        if (!isWeb) {
+        if (!$env.isWeb()) {
             return state; // Not possible.
         }
         if (typeof x.button === 'number' && 0 !== x.button) {
@@ -428,23 +311,23 @@ const locationReducer = (state, x) => {
         if (!/^(_?self)?$/iu.test(a.target) /* Ignores target !== `_self`. */) {
             return state; // Not applicable; i.e., targets a different tab/window.
         }
-        url = new URL(a.href, state.base);
+        url = $url.parse(a.href, state.base);
         //
     } else if (null !== x && typeof x === 'object' && 'popstate' === x.type) {
         // Popstate history event is a change, not a push.
 
-        if (!isWeb) {
+        if (!$env.isWeb()) {
             return state; // Not applicable.
         }
-        url = new URL(location.href, state.base);
+        url = $url.parse(location.href, state.base);
         //
     } else if (null !== x && typeof x === 'object') {
         isPush = true; // Object passed in is a push.
 
-        if ('string' !== typeof x.pathQuery || !x.pathQuery) {
+        if (!x.pathQuery || 'string' !== typeof x.pathQuery) {
             return state; // Not applicable.
         }
-        url = new URL(lTrimSlashes(x.pathQuery), state.base);
+        url = $url.parse($str.lTrim(x.pathQuery, '/'), state.base);
         //
     } else if (typeof x === 'string') {
         isPush = true; // String passed in is a push.
@@ -454,35 +337,45 @@ const locationReducer = (state, x) => {
         if (!pathQuery) {
             return state; // Not applicable.
         }
-        url = new URL(lTrimSlashes(pathQuery), state.base);
+        url = $url.parse($str.lTrim(pathQuery, '/'), state.base);
     }
+    // ---
+    // Validates a potential state update.
+
     if (!url /* Ignores empty URLs and/or invalid updates. */) {
         return state; // Not applicable.
     }
+    // Forces a canonical path for consistency.
+    url.pathname = $url.parse($url.toCanonical(url)).pathname;
+
     if (url.origin !== state.base.origin /* Ignores external URLs. */) {
         return state; // Not applicable.
     }
     if (!['http:', 'https:'].includes(url.protocol) /* Ignores `mailto:`, `tel:`, etc. */) {
         return state; // Not applicable.
     }
-    if (url.hash /* Ignores hashes on current `pathQuery`; i.e., let browser handle hash changes. */) {
-        const newPathQueryHash = removeBasePath(toPathQueryHash(url), state.base);
-        if (new RegExp('^' + escRegExp(state.pathQuery) + '#', 'u').test(newPathQueryHash)) {
-            return state; // Not applicable; i.e., simply an on-page hash change.
-        }
-    }
-    if (isClick && isWeb) x.preventDefault();
+    if (url.hash /* Ignores on-page hash changes; i.e., let browser handle. */) {
+        const newPathQueryHash = $url.removeBasePath($url.toPathQueryHash(url), state.base);
+        if (new RegExp('^' + $str.escRegExp(state.pathQuery) + '#', 'u').test(newPathQueryHash)) return state;
+    } // In the case of a hash changing when the `pathQuery` changes, state updates, and our {@see Router()} handles.
 
-    if (true === isPush && isWeb) {
-        history.pushState(null, '', url);
-    } else if (false === isPush && isWeb) {
-        history.replaceState(null, '', url);
+    // ---
+    // Updates state.
+
+    if ($env.isWeb() /* Only possible in a browser. */) {
+        if (isClick) x.preventDefault();
+
+        if (true === isPush) {
+            history.pushState(null, '', url);
+        } else if (false === isPush) {
+            history.replaceState(null, '', url);
+        }
     }
     return {
         ...state,
         wasPush: isPush,
         // This is `./` relative to base.
-        pathQuery: removeBasePath(toPathQuery(url), state.base),
+        pathQuery: $url.removeBasePath($url.toPathQuery(url), state.base),
     };
 };
 
@@ -501,8 +394,8 @@ const pathMatchesRoutePattern = (path, routePattern, routeContext) => {
         return; // Not possible.
     }
     // These are `./` relative to base.
-    const pathParts = lTrimDotsSlashes(path).split('/').filter(Boolean);
-    const routePatternParts = lTrimDotsSlashes(routePattern).split('/').filter(Boolean);
+    const pathParts = $str.lTrim(path, './').split('/').filter(Boolean);
+    const routePatternParts = $str.lTrim(routePattern, './').split('/').filter(Boolean);
 
     // Produces a deep clone that we may return.
     const newRouteContext = structuredClone(routeContext);

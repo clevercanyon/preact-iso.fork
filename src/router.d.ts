@@ -11,9 +11,12 @@ export type LocationContext = Readonly<{
         // URL push?
         wasPush: boolean;
 
-        // Full URLs.
-        url: URL;
+        // Base URL.
         base: URL;
+        basePath: string;
+
+        // Current URL w/o hash.
+        url: URL;
         canonicalURL: URL;
 
         // Relative `./` to base.
@@ -22,7 +25,7 @@ export type LocationContext = Readonly<{
 
         // Query variables.
         query: string;
-        queryVars: Record<string, string>;
+        queryVars: { [x: string]: string };
     };
     updateState: (pathQuery: string) => void;
 }>;
@@ -51,10 +54,10 @@ export type RouteContext = Readonly<{
 
     // Query variables.
     query: string;
-    queryVars: Record<string, string>;
+    queryVars: { [x: string]: string };
 
     // Path parameter keys/values.
-    params: Record<string, string>;
+    params: { [x: string]: string };
 }>;
 export type RouteContextAsProps = RouteContext;
 

@@ -3,7 +3,7 @@
     "publishConfig": {
         "access": "public"
     },
-    "version": "2.3.75",
+    "version": "2.3.76",
     "license": "GPL-3.0-or-later",
     "name": "@clevercanyon/preact-iso.fork",
     "description": "Isomorphic utilities for Preact.",
@@ -32,30 +32,25 @@
             "import": "./src/index.js",
             "default": "./src/index.js"
         },
-        "./env": {
-            "types": "./src/env.d.ts",
-            "import": "./src/env.js",
-            "default": "./src/env.js"
+        "./lazy": {
+            "types": "./src/lazy.d.ts",
+            "import": "./src/lazy.js",
+            "default": "./src/lazy.js"
         },
         "./router": {
             "types": "./src/router.d.ts",
             "import": "./src/router.js",
             "default": "./src/router.js"
         },
-        "./lazy": {
-            "types": "./src/lazy.d.ts",
-            "import": "./src/lazy.js",
-            "default": "./src/lazy.js"
+        "./prerender": {
+            "types": "./src/prerender.d.ts",
+            "import": "./src/prerender.js",
+            "default": "./src/prerender.js"
         },
         "./hydrate": {
             "types": "./src/hydrate.d.ts",
             "import": "./src/hydrate.js",
             "default": "./src/hydrate.js"
-        },
-        "./prerender": {
-            "types": "./src/prerender.d.ts",
-            "import": "./src/prerender.js",
-            "default": "./src/prerender.js"
         }
     },
     "sideEffects": [],
@@ -67,6 +62,7 @@
     "typesVersions": {},
     "dependencies": {},
     "peerDependencies": {
+        "@clevercanyon/utilities": "^1.0.328",
         "preact": "^10.18.1",
         "preact-render-to-string": "^6.2.2"
     },
