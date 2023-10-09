@@ -47,6 +47,15 @@ export function Location(props) {
                 // Query variables.
                 query: url.search, // Leading `?`.
                 queryVars: $url.getQueryVars(url),
+
+                // Utility methods.
+
+                fromBase(parseable) {
+                    return $url.parse(parseable, state.base).toString();
+                },
+                pathFromBase(parseable) {
+                    return $url.toPathQueryHash($url.parse(parseable, state.base));
+                },
             },
             updateState, // i.e., Location reducer updates state.
         };

@@ -1,9 +1,10 @@
+import { type $type } from '@clevercanyon/utilities';
 import type { AnyComponent, RenderableProps, VNode } from 'preact';
 
 export type LocationProps = RenderableProps<
     Readonly<{
-        url?: URL | string;
-        base?: URL | string;
+        url?: $type.URL | string;
+        base?: $type.URL | string;
     }>
 >;
 export type LocationContext = Readonly<{
@@ -12,12 +13,12 @@ export type LocationContext = Readonly<{
         wasPush: boolean;
 
         // Base URL.
-        base: URL;
+        base: $type.URL;
         basePath: string;
 
         // Current URL w/o hash.
-        url: URL;
-        canonicalURL: URL;
+        url: $type.URL;
+        canonicalURL: $type.URL;
 
         // Relative `./` to base.
         path: string;
@@ -26,6 +27,9 @@ export type LocationContext = Readonly<{
         // Query variables.
         query: string;
         queryVars: { [x: string]: string };
+
+        fromBase(parseable: $type.URL | string): string;
+        pathFromBase(parseable: $type.URL | string): string;
     };
     updateState: (pathQuery: string) => void;
 }>;
