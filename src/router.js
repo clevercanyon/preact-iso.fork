@@ -20,7 +20,7 @@ export function Location(props) {
         () => initialLocationState(props),
     );
     const context = /* Calculate only when state changes. */ useMemo(() => {
-        const url = $url.parse(state.pathQuery, state.base);
+        const url = $url.parse(state.pathQuery, state.baseURL);
         const canonicalURL = $url.parse($url.toCanonical(url));
 
         // Forces a canonical path for consistency.
@@ -31,18 +31,18 @@ export function Location(props) {
                 ...state, // State.
                 // `wasPush: boolean`.
 
-                // Base URL.
-                base: state.base, // URL instance.
+                // Base URL & path.
+                baseURL: state.baseURL, // URL instance.
                 // ↓ Typically has a trailing slash.
-                basePath: $url.toPath(state.base),
+                basePath: $url.toPath(state.baseURL),
 
                 // Current URL w/o hash.
                 url, // URL instance.
                 canonicalURL, // URL instance.
 
                 // These are `./` relative to base.
-                path: $url.removeBasePath($url.toPath(url), state.base),
-                pathQuery: $url.removeBasePath($url.toPathQuery(url), state.base),
+                path: $url.removeBasePath($url.toPath(url), state.baseURL),
+                pathQuery: $url.removeBasePath($url.toPathQuery(url), state.baseURL),
 
                 // Query variables.
                 query: url.search, // Leading `?`.
@@ -51,10 +51,10 @@ export function Location(props) {
                 // Utility methods.
 
                 fromBase(parseable) {
-                    return $url.parse(parseable, state.base).toString();
+                    return $url.parse(parseable, state.baseURL).toString();
                 },
                 pathFromBase(parseable) {
-                    return $url.toPathQueryHash($url.parse(parseable, state.base));
+                    return $url.toPathQueryHash($url.parse(parseable, state.baseURL));
                 },
             },
             updateState, // i.e., Location reducer updates state.
@@ -244,40 +244,40 @@ const RenderRef = ({ r }) => r.current; // Function comp.
  * @returns       Initial location component state.
  */
 const initialLocationState = (props) => {
-    let { url, base } = props; // Initialize.
+    let { url, baseURL } = props; // Initialize.
 
-    if (base && $is.url(base)) {
-        base = $url.parse(base);
-    } else if (base && $is.string(base)) {
-        base = $url.parse(base);
+    if (baseURL && $is.url(baseURL)) {
+        baseURL = $url.parse(baseURL);
+    } else if (baseURL && $is.string(baseURL)) {
+        baseURL = $url.parse(baseURL);
     } else if ($env.isWeb()) {
-        base = $url.parse($url.currentBase());
+        baseURL = $url.parse($url.currentBase());
     } else {
-        throw new Error('Missing `base`.', props);
+        throw new Error('Missing `baseURL`.', props);
     }
     // We intentionally do not trim a trailing slash from the base URL.
     // The trailing slash is important to `URL()` when forming paths from base.
 
     if (url && $is.url(url)) {
-        url = $url.parse(url);
+        url = $url.parse(url, baseURL);
     } else if (url && $is.string(url)) {
-        url = $url.parse(url, base);
+        url = $url.parse(url, baseURL);
     } else if ($env.isWeb()) {
-        url = $url.parse($url.current());
+        url = $url.parse($url.current(), baseURL);
     } else {
         throw new Error('Missing `url`.', props);
     }
     // Forces a canonical path for consistency.
     url.pathname = $url.parse($url.toCanonical(url)).pathname;
 
-    if (url.origin !== base.origin) {
-        throw new Error('URL `origin` mismatch.', { url, base });
+    if (url.origin !== baseURL.origin) {
+        throw new Error('URL `origin` mismatch.', { url, baseURL });
     }
     return {
         wasPush: true,
-        base, // Does not change.
+        baseURL, // Does not change.
         // This is `./` relative to base.
-        pathQuery: $url.removeBasePath($url.toPathQuery(url), base),
+        pathQuery: $url.removeBasePath($url.toPathQuery(url), baseURL),
     };
 };
 
@@ -320,7 +320,7 @@ const locationReducer = (state, x) => {
         if (!/^(_?self)?$/iu.test(a.target) /* Ignores target !== `_self`. */) {
             return state; // Not applicable; i.e., targets a different tab/window.
         }
-        url = $url.parse(a.href, state.base);
+        url = $url.parse(a.href, state.baseURL);
         //
     } else if (null !== x && typeof x === 'object' && 'popstate' === x.type) {
         // Popstate history event is a change, not a push.
@@ -328,7 +328,7 @@ const locationReducer = (state, x) => {
         if (!$env.isWeb()) {
             return state; // Not applicable.
         }
-        url = $url.parse(location.href, state.base);
+        url = $url.parse(location.href, state.baseURL);
         //
     } else if (null !== x && typeof x === 'object') {
         isPush = true; // Object passed in is a push.
@@ -336,7 +336,7 @@ const locationReducer = (state, x) => {
         if (!x.pathQuery || 'string' !== typeof x.pathQuery) {
             return state; // Not applicable.
         }
-        url = $url.parse($str.lTrim(x.pathQuery, '/'), state.base);
+        url = $url.parse($str.lTrim(x.pathQuery, '/'), state.baseURL);
         //
     } else if (typeof x === 'string') {
         isPush = true; // String passed in is a push.
@@ -346,7 +346,7 @@ const locationReducer = (state, x) => {
         if (!pathQuery) {
             return state; // Not applicable.
         }
-        url = $url.parse($str.lTrim(pathQuery, '/'), state.base);
+        url = $url.parse($str.lTrim(pathQuery, '/'), state.baseURL);
     }
     // ---
     // Validates a potential state update.
@@ -357,14 +357,14 @@ const locationReducer = (state, x) => {
     // Forces a canonical path for consistency.
     url.pathname = $url.parse($url.toCanonical(url)).pathname;
 
-    if (url.origin !== state.base.origin /* Ignores external URLs. */) {
+    if (url.origin !== state.baseURL.origin /* Ignores external URLs. */) {
         return state; // Not applicable.
     }
     if (!['http:', 'https:'].includes(url.protocol) /* Ignores `mailto:`, `tel:`, etc. */) {
         return state; // Not applicable.
     }
     if (url.hash /* Ignores on-page hash changes; i.e., let browser handle. */) {
-        const newPathQueryHash = $url.removeBasePath($url.toPathQueryHash(url), state.base);
+        const newPathQueryHash = $url.removeBasePath($url.toPathQueryHash(url), state.baseURL);
         if (new RegExp('^' + $str.escRegExp(state.pathQuery) + '#', 'u').test(newPathQueryHash)) return state;
     } // In the case of a hash changing when the `pathQuery` changes, state updates, and our {@see Router()} handles.
 
@@ -384,7 +384,7 @@ const locationReducer = (state, x) => {
         ...state,
         wasPush: isPush,
         // This is `./` relative to base.
-        pathQuery: $url.removeBasePath($url.toPathQuery(url), state.base),
+        pathQuery: $url.removeBasePath($url.toPathQuery(url), state.baseURL),
     };
 };
 

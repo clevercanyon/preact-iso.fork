@@ -3,7 +3,7 @@
     "publishConfig": {
         "access": "public"
     },
-    "version": "2.3.80",
+    "version": "2.3.81",
     "license": "GPL-3.0-or-later",
     "name": "@clevercanyon/preact-iso.fork",
     "description": "Isomorphic utilities for Preact.",
@@ -62,7 +62,7 @@
     "typesVersions": {},
     "dependencies": {},
     "peerDependencies": {
-        "@clevercanyon/utilities": "^1.0.330",
+        "@clevercanyon/utilities": "^1.0.331",
         "preact": "^10.18.1",
         "preact-render-to-string": "^6.2.2"
     },

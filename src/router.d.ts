@@ -4,7 +4,7 @@ import type { AnyComponent, RenderableProps, VNode } from 'preact';
 export type LocationProps = RenderableProps<
     Readonly<{
         url?: $type.URL | string;
-        base?: $type.URL | string;
+        baseURL?: $type.URL | string;
     }>
 >;
 export type LocationContext = Readonly<{
@@ -12,8 +12,8 @@ export type LocationContext = Readonly<{
         // URL push?
         wasPush: boolean;
 
-        // Base URL.
-        base: $type.URL;
+        // Base URL & path.
+        baseURL: $type.URL;
         basePath: string;
 
         // Current URL w/o hash.
