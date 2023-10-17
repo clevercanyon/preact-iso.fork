@@ -1,4 +1,4 @@
-import type { AnyComponent, VNode } from 'preact';
+import type { ComponentType, VNode } from 'preact';
 
 export type PrerenderOptions = Readonly<{
     props?: { [x: string]: unknown };
@@ -7,4 +7,4 @@ export type PrerenderOptions = Readonly<{
 export type PrerenderResult = {
     html: string;
 };
-export default function prerender(vnode: AnyComponent | VNode, options?: PrerenderOptions): Promise<PrerenderResult>;
+export default function prerender(vnode: ComponentType | VNode, options?: PrerenderOptions): Promise<PrerenderResult>;
